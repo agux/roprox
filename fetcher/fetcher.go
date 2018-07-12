@@ -52,11 +52,8 @@ func Fetch(chpx chan<- *t.ProxyServer, fspec t.FetcherSpec) {
 			func(i int, s *goquery.Selection) {
 				ps := fspec.ScanItem(i, s)
 				if ps != nil {
-					host, port := ps.Host, ps.Port
-					if util.CheckRemote(host, port) {
-						chpx <- ps
-						count++
-					}
+					chpx <- ps
+					count++
 				}
 			})
 		logrus.Infof("%d proxies available from %s", count, url)

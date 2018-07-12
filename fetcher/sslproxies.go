@@ -9,44 +9,44 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-//FreeProxyList fetches proxy server from https://free-proxy-list.net/
-type FreeProxyList struct{}
+//SSLProxies fetches proxy server from https://www.sslproxies.org/
+type SSLProxies struct{}
 
 //UID returns the unique identifier for this spec.
-func (f FreeProxyList) UID() string {
-	return "FreeProxyList"
+func (f SSLProxies) UID() string {
+	return "sslproxies"
 }
 
 //Urls return the server urls that provide the free proxy server lists.
-func (f FreeProxyList) Urls() []string {
-	return []string{`https://free-proxy-list.net/`}
+func (f SSLProxies) Urls() []string {
+	return []string{`https://www.sslproxies.org/`}
 }
 
 //IsGBK returns wheter the web page is GBK encoded.
-func (f FreeProxyList) IsGBK() bool {
+func (f SSLProxies) IsGBK() bool {
 	return false
 }
 
 //UseMasterProxy returns whether the fetcher needs a master proxy server
 //to access the free proxy list provider.
-func (f FreeProxyList) UseMasterProxy() bool {
+func (f SSLProxies) UseMasterProxy() bool {
 	return true
 }
 
 //ListSelector returns the jQuery selector for searching the proxy server list/table.
-func (f FreeProxyList) ListSelector() []string {
+func (f SSLProxies) ListSelector() []string {
 	return []string{
 		"#proxylisttable tbody tr",
 	}
 }
 
 //RefreshInterval determines how often the list should be refreshed, in minutes.
-func (f FreeProxyList) RefreshInterval() int {
+func (f SSLProxies) RefreshInterval() int {
 	return 10
 }
 
 //ScanItem process each item found in the table determined by ListSelector().
-func (f FreeProxyList) ScanItem(i int, s *goquery.Selection) (ps *types.ProxyServer) {
+func (f SSLProxies) ScanItem(i int, s *goquery.Selection) (ps *types.ProxyServer) {
 	lchk := s.Find("td:nth-child(8)").Text()
 	if strings.HasSuffix(lchk, "minutes ago") {
 		m := lchk[:strings.Index(lchk, " ")]

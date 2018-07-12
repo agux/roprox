@@ -8,8 +8,10 @@ import (
 const (
 	//OK indicates the proxy server is available per the last check result
 	OK = "OK"
-	//Fail indicates the proxy server is unavailable per the last check result
-	Fail = "Fail"
+	//FAIL indicates the proxy server is unavailable per the last check result
+	FAIL = "FAIL"
+	//UNK indicators the proxy server status is unknown.
+	UNK = "UNK"
 )
 
 //ProxyServer is a model mapping for database table proxy_list
@@ -30,7 +32,7 @@ func NewProxyServer(source, host, port, stype string) *ProxyServer {
 		Host:        host,
 		Port:        port,
 		Type:        stype,
-		Status:      OK,
+		Status:      UNK,
 		LastCheck:   util.Now(),
 		LastScanned: util.Now(),
 	}

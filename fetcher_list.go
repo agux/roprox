@@ -13,6 +13,8 @@ var fslist = []t.FetcherSpec{
 	f.IP3366{},
 	f.SocksProxy{},
 	f.Z66IP{},
+	f.SSLProxies{},
+	f.CoderBusy{},
 }
 
 var proxies = make(map[string]t.FetcherSpec)
