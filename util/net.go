@@ -28,10 +28,10 @@ func CheckRemote(host, port string) bool {
 		return false
 	}
 	if conn != nil {
-		logrus.Infof("%s success", addr)
+		logrus.Debugf("%s success", addr)
 		conn.Close()
 		return true
 	}
-	logrus.Warnf("%s failed", addr)
+	logrus.Warnf("%s timed out", addr)
 	return false
 }

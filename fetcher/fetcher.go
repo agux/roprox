@@ -14,7 +14,7 @@ import (
 
 //Fetch proxy server information using the specified fetcher specification,
 //and output to the channel.
-func Fetch(chpx chan<- []*t.ProxyServer, fspec t.FetcherSpec) {
+func Fetch(chpx chan<- *t.ProxyServer, fspec t.FetcherSpec) {
 	gbk := fspec.IsGBK()
 	useMasterProxy := fspec.UseMasterProxy()
 	selectors := fspec.ListSelector()
@@ -40,7 +40,7 @@ func Fetch(chpx chan<- []*t.ProxyServer, fspec t.FetcherSpec) {
 			log.Printf("failed to read response body from %s: %+v", url, e)
 			return
 		}
-		var pool []*t.ProxyServer
+		count := 0
 		//parse free proxy item
 		if i < len(selectors) {
 			sel = selectors[i]
@@ -53,11 +53,11 @@ func Fetch(chpx chan<- []*t.ProxyServer, fspec t.FetcherSpec) {
 				if ps != nil {
 					host, port := ps.Host, ps.Port
 					if util.CheckRemote(host, port) {
-						pool = append(pool, ps)
+						chpx <- ps
+						count++
 					}
 				}
 			})
-		log.Printf("%d proxies available from %s", len(pool), url)
-		chpx <- pool
+		log.Printf("%d proxies available from %s", count, url)
 	}
 }

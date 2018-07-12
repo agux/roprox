@@ -26,19 +26,23 @@ func collectStaleServers(chjobs chan<- *types.ProxyServer) {
 	for {
 		select {
 		case <-ticker.C:
+			logrus.Debug("collecting stale servers...")
 			var list []*types.ProxyServer
 			query := `SELECT 
 					      *
 					  FROM
 					      proxy_list
 					  WHERE
-						  last_check <= ?`
-			_, e := db.Select(&list, query, time.Now().Add(
+					      status = ?
+						  and last_check <= ?
+						  order by last_check`
+			_, e := db.Select(&list, query, types.OK, time.Now().Add(
 				-time.Duration(conf.Args.CheckInterval)*time.Second).Format(util.DateTimeFormat))
 			if e != nil {
 				logrus.Errorln("failed to query stale proxy servers", e)
 				continue
 			}
+			logrus.Debugf("%d stale servers pending for health check", len(list))
 			for _, p := range list {
 				chjobs <- p
 			}
@@ -58,7 +62,7 @@ func probe(chjobs <-chan *types.ProxyServer) {
 					status = types.OK
 				}
 				db.Exec(`update proxy_list set status = ? and last_check = ? where host = ? and port = ?`,
-					status, time.Now(), job.Host, job.Port)
+					status, util.Now(), job.Host, job.Port)
 			}
 		}()
 	}
