@@ -33,4 +33,9 @@ func init() {
 	if err != nil {
 		logrus.Panic("Failed to ping db", err)
 	}
+
+	logFormatter := new(logrus.TextFormatter)
+	logFormatter.FullTimestamp = true
+	logFormatter.TimestampFormat = "2006-01-02 15:04:05"
+	logrus.SetFormatter(logFormatter)
 }

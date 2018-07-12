@@ -1,13 +1,13 @@
 package util
 
 import (
-	"log"
 	"math/rand"
 	"net/http"
 	"time"
 
 	"github.com/carusyte/roprox/conf"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 	"golang.org/x/net/proxy"
 )
 
@@ -20,7 +20,7 @@ func HTTPGetResponse(link string, headers map[string]string, useMasterProxy, rot
 		// create a socks5 dialer
 		dialer, err := proxy.SOCKS5("tcp", conf.Args.MasterProxyAddr, nil, proxy.Direct)
 		if err != nil {
-			log.Printf("can't connect to the master proxy: %+v", err)
+			logrus.Errorln("can't connect to the master proxy", err)
 			return nil, errors.WithStack(err)
 		}
 		// setup a http client
@@ -34,7 +34,7 @@ func HTTPGetResponse(link string, headers map[string]string, useMasterProxy, rot
 	for i := 0; true; i++ {
 		req, err := http.NewRequest(http.MethodGet, link, nil)
 		if err != nil {
-			log.Panic(err)
+			logrus.Panic(err)
 		}
 
 		req.Header.Set("Accept", "text/html,application/xhtml+xml,"+
@@ -51,7 +51,7 @@ func HTTPGetResponse(link string, headers map[string]string, useMasterProxy, rot
 		if rotateAgent {
 			uagent, e = PickUserAgent()
 			if e != nil {
-				log.Printf("failed to acquire rotate user agent: %+v", e)
+				logrus.Errorln("failed to acquire rotate user agent", e)
 				time.Sleep(time.Millisecond * time.Duration(300+rand.Intn(300)))
 				continue
 			}
@@ -70,11 +70,11 @@ func HTTPGetResponse(link string, headers map[string]string, useMasterProxy, rot
 		if err != nil {
 			//handle "read: connection reset by peer" error by retrying
 			if i >= conf.Args.HTTPRetry {
-				log.Printf("http communication failed. url=%s\n%+v", link, err)
+				logrus.Errorf("http communication failed. url=%s\n%+v", link, err)
 				e = err
 				return
 			}
-			log.Printf("http communication error. url=%s, retrying %d ...\n%+v", link, i+1, err)
+			logrus.Errorf("http communication error. url=%s, retrying %d ...\n%+v", link, i+1, err)
 			if res != nil {
 				res.Body.Close()
 			}

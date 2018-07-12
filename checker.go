@@ -33,10 +33,10 @@ func collectStaleServers(chjobs chan<- *types.ProxyServer) {
 					  FROM
 					      proxy_list
 					  WHERE
-					      status = ?
-						  and last_check <= ?
+						  last_check <= ?
 						  order by last_check`
-			_, e := db.Select(&list, query, types.OK, time.Now().Add(
+			//TODO do we need to filter out failed servers to lower the workload?
+			_, e := db.Select(&list, query, time.Now().Add(
 				-time.Duration(conf.Args.CheckInterval)*time.Second).Format(util.DateTimeFormat))
 			if e != nil {
 				logrus.Errorln("failed to query stale proxy servers", e)
@@ -56,13 +56,16 @@ func collectStaleServers(chjobs chan<- *types.ProxyServer) {
 func probe(chjobs <-chan *types.ProxyServer) {
 	for i := 0; i < conf.Args.CheckerPoolSize; i++ {
 		go func() {
-			for job := range chjobs {
+			for ps := range chjobs {
 				status := types.Fail
-				if util.CheckRemote(job.Host, job.Port) {
+				if util.CheckRemote(ps.Host, ps.Port) {
 					status = types.OK
 				}
-				db.Exec(`update proxy_list set status = ? and last_check = ? where host = ? and port = ?`,
-					status, util.Now(), job.Host, job.Port)
+				_, e := db.Exec(`update proxy_list set status = ?, last_check = ? where host = ? and port = ?`,
+					status, util.Now(), ps.Host, ps.Port)
+				if e != nil {
+					logrus.Errorln("failed to update proxy server status", e)
+				}
 			}
 		}()
 	}
