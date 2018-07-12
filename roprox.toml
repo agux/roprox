@@ -1,0 +1,12 @@
+# debug, info, warning, error, fatal, panic
+log_level = "debug"
+
+master_proxy_addr = "127.0.0.1:1086"
+http_retry = 3
+
+scanner_pool_size = 8
+scanner_max_retry = 2
+
+checker_pool_size = 16
+check_interval = 45
+check_timeout = 3
