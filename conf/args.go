@@ -20,6 +20,7 @@ type Arguments struct {
 	ProbeTimeout     int    `mapstructure:"probe_timeout"`
 	EvictionTimeout  int    `mapstructure:"eviction_timeout"`
 	EvictionInterval int    `mapstructure:"eviction_interval"`
+	EvictionFailure  int    `mapstructure:"eviction_failure"`
 	//TODO logrus log to file
 }
 

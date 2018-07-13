@@ -19,7 +19,10 @@ func (f FreeProxyList) UID() string {
 
 //Urls return the server urls that provide the free proxy server lists.
 func (f FreeProxyList) Urls() []string {
-	return []string{`https://free-proxy-list.net/`}
+	return []string{
+		`https://free-proxy-list.net/`,
+		`https://free-proxy-list.net/anonymous-proxy.html`,
+	}
 }
 
 //IsGBK returns wheter the web page is GBK encoded.
@@ -51,7 +54,7 @@ func (f FreeProxyList) ScanItem(i int, s *goquery.Selection) (ps *types.ProxySer
 	if strings.HasSuffix(lchk, "minutes ago") {
 		m := lchk[:strings.Index(lchk, " ")]
 		if i, e := strconv.ParseInt(m, 10, 64); e == nil {
-			if int(i) > 30 {
+			if int(i) > 50 {
 				return
 			}
 		} else {

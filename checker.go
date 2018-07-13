@@ -19,13 +19,14 @@ func check(wg *sync.WaitGroup) {
 	collectStaleServers(chjobs)
 }
 
-func evictStaleServers() {
-	logrus.Debug("evicting stale servers...")
-	delete := `delete from proxy_list where status = ? and last_scanned <= ?`
+func evictBrokenServers() {
+	logrus.Debug("evicting broken servers...")
+	delete := `delete from proxy_list where status = ? and (last_scanned <= ? or fail >= ?)`
 	r, e := db.Exec(delete, types.FAIL, time.Now().Add(
-		-time.Duration(conf.Args.EvictionTimeout)*time.Second).Format(util.DateTimeFormat))
+		-time.Duration(conf.Args.EvictionTimeout)*time.Second).Format(util.DateTimeFormat),
+		conf.Args.EvictionFailure)
 	if e != nil {
-		logrus.Errorln("failed to evict stale proxy servers", e)
+		logrus.Errorln("failed to evict broken proxy servers", e)
 		return
 	}
 	ra, e := r.RowsAffected()
@@ -33,12 +34,12 @@ func evictStaleServers() {
 		logrus.Warnf("unable to get rows affected after eviction", e)
 		return
 	}
-	logrus.Debugf("%d stale servers evicted", ra)
+	logrus.Debugf("%d broken servers evicted", ra)
 }
 
 func collectStaleServers(chjobs chan<- *types.ProxyServer) {
 	//kickoff at once and repeatedly
-	evictStaleServers()
+	evictBrokenServers()
 	queryStaleServers(chjobs)
 	probeTk := time.NewTicker(time.Duration(conf.Args.ProbeInterval) * time.Second)
 	evictTk := time.NewTicker(time.Duration(conf.Args.EvictionInterval) * time.Second)
@@ -48,7 +49,7 @@ func collectStaleServers(chjobs chan<- *types.ProxyServer) {
 		case <-probeTk.C:
 			queryStaleServers(chjobs)
 		case <-evictTk.C:
-			evictStaleServers()
+			evictBrokenServers()
 		case <-quit:
 			probeTk.Stop()
 			evictTk.Stop()
@@ -84,12 +85,16 @@ func probe(chjobs <-chan *types.ProxyServer) {
 	for i := 0; i < conf.Args.ProbeSize; i++ {
 		go func() {
 			for ps := range chjobs {
-				status := types.FAIL
+				var e error
 				if util.ValidateProxy(ps.Type, ps.Host, ps.Port) {
-					status = types.OK
+					_, e = db.Exec(`update proxy_list set status = ?, `+
+						`fail = 0, last_check = ? where host = ? and port = ?`,
+						types.OK, util.Now(), ps.Host, ps.Port)
+				} else {
+					_, e = db.Exec(`update proxy_list set status = ?, `+
+						`fail = fail + 1, last_check = ? where host = ? and port = ?`,
+						types.FAIL, util.Now(), ps.Host, ps.Port)
 				}
-				_, e := db.Exec(`update proxy_list set status = ?, last_check = ? where host = ? and port = ?`,
-					status, util.Now(), ps.Host, ps.Port)
 				if e != nil {
 					logrus.Errorln("failed to update proxy server status", e)
 				}

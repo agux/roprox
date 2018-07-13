@@ -25,6 +25,7 @@ type ProxyServer struct {
 	Port        string
 	Type        string
 	Status      string
+	Fail        int
 	LastCheck   string `db:"last_check"`
 	LastScanned string `db:"last_scanned"`
 }
@@ -45,6 +46,7 @@ func NewProxyServer(source, host, port, stype string) *ProxyServer {
 		Port:        port,
 		Type:        stype,
 		Status:      UNK,
+		Fail:        0,
 		LastCheck:   util.Now(),
 		LastScanned: util.Now(),
 	}
