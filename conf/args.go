@@ -10,14 +10,16 @@ var Args Arguments
 
 //Arguments arguments struct type
 type Arguments struct {
-	LogLevel            string `mapstructure:"log_level"`
-	MasterProxyAddr     string `mapstructure:"master_proxy_addr"`
-	HTTPRetry           int    `mapstructure:"http_retry"`
-	ScannerPoolSize     int    `mapstructure:"scanner_pool_size"`
-	ScannerMaxRetry     int    `mapstructure:"scanner_max_retry"`
-	CheckerPoolSize     int    `mapstructure:"checker_pool_size"`
-	CheckInterval   int    `mapstructure:"check_interval"`
-	CheckTimeout int    `mapstructure:"check_timeout"`
+	LogLevel         string `mapstructure:"log_level"`
+	MasterProxyAddr  string `mapstructure:"master_proxy_addr"`
+	HTTPRetry        int    `mapstructure:"http_retry"`
+	ScannerPoolSize  int    `mapstructure:"scanner_pool_size"`
+	ScannerMaxRetry  int    `mapstructure:"scanner_max_retry"`
+	ProbeSize        int    `mapstructure:"probe_size"`
+	ProbeInterval    int    `mapstructure:"probe_interval"`
+	ProbeTimeout     int    `mapstructure:"probe_timeout"`
+	EvictionTimeout  int    `mapstructure:"eviction_timeout"`
+	EvictionInterval int    `mapstructure:"eviction_interval"`
 	//TODO logrus log to file
 }
 

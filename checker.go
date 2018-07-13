@@ -14,16 +14,55 @@ import (
 func check(wg *sync.WaitGroup) {
 	defer wg.Done()
 
+	var wgs sync.WaitGroup
 	chjobs := make(chan *types.ProxyServer, 128)
 	probe(chjobs)
-	collectStaleServers(chjobs)
+	wgs.Add(2)
+	go collectStaleServers(&wgs, chjobs)
+	go cleanEvictableServers(&wgs)
 
+	wgs.Wait()
 }
 
-func collectStaleServers(chjobs chan<- *types.ProxyServer) {
+func cleanEvictableServers(wg *sync.WaitGroup) {
+	defer wg.Done()
+	//kickoff at once and repeatedly
+	evictStaleServers()
+	ticker := time.NewTicker(time.Duration(conf.Args.EvictionInterval) * time.Second)
+	quit := make(chan struct{})
+	for {
+		select {
+		case <-ticker.C:
+			evictStaleServers()
+		case <-quit:
+			ticker.Stop()
+			return
+		}
+	}
+}
+
+func evictStaleServers() {
+	logrus.Debug("evicting stale servers...")
+	delete := `delete from proxy_list where status = ? and last_scanned <= ?`
+	r, e := db.Exec(delete, types.FAIL, time.Now().Add(
+		-time.Duration(conf.Args.EvictionTimeout)*time.Second).Format(util.DateTimeFormat))
+	if e != nil {
+		logrus.Errorln("failed to evict stale proxy servers", e)
+		return
+	}
+	ra, e := r.RowsAffected()
+	if e != nil {
+		logrus.Warnf("unable to get rows affected after eviction", e)
+		return
+	}
+	logrus.Debugf("%d stale servers evicted", ra)
+}
+
+func collectStaleServers(wg *sync.WaitGroup, chjobs chan<- *types.ProxyServer) {
+	defer wg.Done()
 	//kickoff at once and repeatedly
 	queryStaleServers(chjobs)
-	ticker := time.NewTicker(time.Duration(conf.Args.CheckInterval) * time.Second)
+	ticker := time.NewTicker(time.Duration(conf.Args.ProbeInterval) * time.Second)
 	quit := make(chan struct{})
 	for {
 		select {
@@ -48,7 +87,7 @@ func queryStaleServers(chjobs chan<- *types.ProxyServer) {
 					order by last_check`
 	//TODO do we need to filter out failed servers to lower the workload?
 	_, e := db.Select(&list, query, time.Now().Add(
-		-time.Duration(conf.Args.CheckInterval)*time.Second).Format(util.DateTimeFormat))
+		-time.Duration(conf.Args.ProbeInterval)*time.Second).Format(util.DateTimeFormat))
 	if e != nil {
 		logrus.Errorln("failed to query stale proxy servers", e)
 		return
@@ -60,7 +99,7 @@ func queryStaleServers(chjobs chan<- *types.ProxyServer) {
 }
 
 func probe(chjobs <-chan *types.ProxyServer) {
-	for i := 0; i < conf.Args.CheckerPoolSize; i++ {
+	for i := 0; i < conf.Args.ProbeSize; i++ {
 		go func() {
 			for ps := range chjobs {
 				status := types.FAIL

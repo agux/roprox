@@ -22,8 +22,8 @@ func init() {
 		logrus.Panicln("sql.Open failed", err)
 	}
 
-	mysql.SetMaxOpenConns(64)
-	mysql.SetMaxIdleConns(64)
+	mysql.SetMaxOpenConns(16)
+	mysql.SetMaxIdleConns(5)
 	mysql.SetConnMaxLifetime(time.Second * 15)
 
 	// construct a gorp DbMap

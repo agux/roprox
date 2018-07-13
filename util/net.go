@@ -26,9 +26,14 @@ func DomainOf(url string) (domain string) {
 
 //ValidateProxy checks the status of remote listening port, and further checks if it's a valid proxy server
 func ValidateProxy(stype, host, port string) bool {
-	timeout := time.Second * time.Duration(conf.Args.CheckTimeout)
+	timeout := time.Second * time.Duration(conf.Args.ProbeTimeout)
 	addr := net.JoinHostPort(host, port)
 	conn, err := net.DialTimeout("tcp", addr, timeout)
+	defer func() {
+		if conn != nil {
+			conn.Close()
+		}
+	}()
 	if err != nil {
 		logrus.Warnf("%s failed: %+v", addr, err)
 		return false
@@ -37,7 +42,6 @@ func ValidateProxy(stype, host, port string) bool {
 		logrus.Warnf("%s timed out", addr)
 		return false
 	}
-	conn.Close()
 
 	link := `http://www.baidu.com`
 
@@ -90,8 +94,8 @@ func ValidateProxy(stype, host, port string) bool {
 		logrus.Warnf("%s failed to visit validation site: %+v", addr, err)
 		return false
 	}
-
 	defer res.Body.Close()
+
 	doc, e := goquery.NewDocumentFromReader(res.Body)
 	if e != nil {
 		logrus.Warnf("%s failed to read validation site's response body: %+v", addr, e)
