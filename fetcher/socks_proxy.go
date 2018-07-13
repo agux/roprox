@@ -51,6 +51,10 @@ func (f SocksProxy) ScanItem(i int, s *goquery.Selection) (ps *types.ProxyServer
 	if !strings.EqualFold("socks5", ptype) {
 		return
 	}
+	anon := strings.TrimSpace(s.Find("td:nth-child(5)").Text())
+	if strings.EqualFold(anon, `transparent`) {
+		return
+	}
 	host := strings.TrimSpace(s.Find("td:nth-child(1)").Text())
 	port := strings.TrimSpace(s.Find("td:nth-child(2)").Text())
 	ps = types.NewProxyServer(f.UID(), host, port, "socks5")

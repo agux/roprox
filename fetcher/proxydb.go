@@ -51,7 +51,7 @@ func (f ProxyDB) RefreshInterval() int {
 
 //ScanItem process each item found in the table determined by ListSelector().
 func (f ProxyDB) ScanItem(i int, s *goquery.Selection) (ps *types.ProxyServer) {
-	anon := s.Find("td:nth-child(6) span").Text()
+	anon := strings.TrimSpace(s.Find("td:nth-child(6) span").Text())
 	if strings.EqualFold("Transparent", anon) {
 		return
 	}

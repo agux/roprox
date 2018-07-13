@@ -49,8 +49,9 @@ func (f KuaiDaiLi) RefreshInterval() int {
 
 //ScanItem process each item found in the table determined by ListSelector().
 func (f KuaiDaiLi) ScanItem(i int, s *goquery.Selection) (ps *types.ProxyServer) {
-	lchk := s.Find("td:nth-child(8)").Text()
-	if strings.HasSuffix(lchk, "小时前") {
+	lchk := strings.TrimSpace(s.Find("td:nth-child(8)").Text())
+	anon := strings.TrimSpace(s.Find("td:nth-child(3)").Text())
+	if strings.HasSuffix(lchk, "小时前") || strings.Contains(anon, `透明`) {
 		return
 	}
 	host := strings.TrimSpace(s.Find("td:nth-child(1)").Text())

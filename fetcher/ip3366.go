@@ -47,6 +47,10 @@ func (f IP3366) RefreshInterval() int {
 
 //ScanItem process each item found in the table determined by ListSelector().
 func (f IP3366) ScanItem(i int, s *goquery.Selection) (ps *types.ProxyServer) {
+	anon := strings.TrimSpace(s.Find("td:nth-child(3)").Text())
+	if strings.Contains(anon, `透明`) {
+		return
+	}
 	host := strings.TrimSpace(s.Find("td:nth-child(1)").Text())
 	port := strings.TrimSpace(s.Find("td:nth-child(2)").Text())
 	ps = types.NewProxyServer(f.UID(), host, port, "http")

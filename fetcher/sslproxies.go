@@ -47,17 +47,21 @@ func (f SSLProxies) RefreshInterval() int {
 
 //ScanItem process each item found in the table determined by ListSelector().
 func (f SSLProxies) ScanItem(i int, s *goquery.Selection) (ps *types.ProxyServer) {
-	lchk := s.Find("td:nth-child(8)").Text()
+	lchk := strings.TrimSpace(s.Find("td:nth-child(8)").Text())
 	if strings.HasSuffix(lchk, "minutes ago") {
 		m := lchk[:strings.Index(lchk, " ")]
 		if i, e := strconv.ParseInt(m, 10, 64); e == nil {
-			if int(i) > 30 {
+			if int(i) > 50 {
 				return
 			}
 		} else {
 			logrus.Errorf("failed to parse proxy last check string: %s, %+v", m, e)
 			return
 		}
+	}
+	anon := strings.TrimSpace(s.Find("td:nth-child(5)").Text())
+	if strings.EqualFold(anon, `transparent`) {
+		return
 	}
 	host := strings.TrimSpace(s.Find("td:nth-child(1)").Text())
 	port := strings.TrimSpace(s.Find("td:nth-child(2)").Text())

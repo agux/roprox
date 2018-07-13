@@ -20,6 +20,7 @@ func (f HinkyDink) Urls() []string {
 	return []string{
 		`http://www.mrhinkydink.com/proxies.htm`,
 		`http://www.mrhinkydink.com/proxies2.htm`,
+		`http://www.mrhinkydink.com/proxies3.htm`,
 	}
 }
 
@@ -49,6 +50,10 @@ func (f HinkyDink) RefreshInterval() int {
 
 //ScanItem process each item found in the table determined by ListSelector().
 func (f HinkyDink) ScanItem(i int, s *goquery.Selection) (ps *types.ProxyServer) {
+	anon := strings.TrimSpace(s.Find("td:nth-child(3)").Text())
+	if strings.EqualFold(anon, `transparent`) {
+		return
+	}
 	host := strings.TrimSpace(s.Find("td:nth-child(1)").Text())
 	host = strings.TrimRight(host, `*`)
 	port := strings.TrimSpace(s.Find("td:nth-child(2)").Text())

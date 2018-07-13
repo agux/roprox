@@ -53,6 +53,10 @@ func (f Data5u) ScanItem(i int, s *goquery.Selection) (ps *types.ProxyServer) {
 		//skip header
 		return
 	}
+	anon := strings.TrimSpace(s.Find("span:nth-child(3) li a").Text())
+	if strings.Contains(anon, `透明`) {
+		return
+	}
 	host := strings.TrimSpace(s.Find("span:nth-child(1) li").Text())
 	port := strings.TrimSpace(s.Find("span:nth-child(2) li").Text())
 	ps = types.NewProxyServer(f.UID(), host, port, "http")

@@ -21,6 +21,8 @@ func (f Z66IP) Urls() []string {
 		`http://www.66ip.cn/1.html`,
 		`http://www.66ip.cn/2.html`,
 		`http://www.66ip.cn/3.html`,
+		`http://www.66ip.cn/4.html`,
+		`http://www.66ip.cn/5.html`,
 	}
 }
 
@@ -51,6 +53,10 @@ func (f Z66IP) RefreshInterval() int {
 func (f Z66IP) ScanItem(i int, s *goquery.Selection) (ps *types.ProxyServer) {
 	if i == 0 {
 		//skip header
+		return
+	}
+	anon := strings.TrimSpace(s.Find("td:nth-child(4)").Text())
+	if strings.Contains(anon, `透明`) {
 		return
 	}
 	host := strings.TrimSpace(s.Find("td:nth-child(1)").Text())
