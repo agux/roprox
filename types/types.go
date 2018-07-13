@@ -1,8 +1,12 @@
 package types
 
 import (
+	"encoding/json"
+	"fmt"
+
 	"github.com/PuerkitoBio/goquery"
 	"github.com/carusyte/roprox/util"
+	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -23,6 +27,14 @@ type ProxyServer struct {
 	Status      string
 	LastCheck   string `db:"last_check"`
 	LastScanned string `db:"last_scanned"`
+}
+
+func (p *ProxyServer) String() string {
+	j, e := json.Marshal(p)
+	if e != nil {
+		logrus.Error(e)
+	}
+	return fmt.Sprintf("%v", string(j))
 }
 
 //NewProxyServer creates an instance of ProxyServer.
