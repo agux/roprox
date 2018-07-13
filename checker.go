@@ -14,31 +14,9 @@ import (
 func check(wg *sync.WaitGroup) {
 	defer wg.Done()
 
-	var wgs sync.WaitGroup
 	chjobs := make(chan *types.ProxyServer, 128)
 	probe(chjobs)
-	wgs.Add(2)
-	go collectStaleServers(&wgs, chjobs)
-	go cleanEvictableServers(&wgs)
-
-	wgs.Wait()
-}
-
-func cleanEvictableServers(wg *sync.WaitGroup) {
-	defer wg.Done()
-	//kickoff at once and repeatedly
-	evictStaleServers()
-	ticker := time.NewTicker(time.Duration(conf.Args.EvictionInterval) * time.Second)
-	quit := make(chan struct{})
-	for {
-		select {
-		case <-ticker.C:
-			evictStaleServers()
-		case <-quit:
-			ticker.Stop()
-			return
-		}
-	}
+	collectStaleServers(chjobs)
 }
 
 func evictStaleServers() {
@@ -58,18 +36,22 @@ func evictStaleServers() {
 	logrus.Debugf("%d stale servers evicted", ra)
 }
 
-func collectStaleServers(wg *sync.WaitGroup, chjobs chan<- *types.ProxyServer) {
-	defer wg.Done()
+func collectStaleServers(chjobs chan<- *types.ProxyServer) {
 	//kickoff at once and repeatedly
+	evictStaleServers()
 	queryStaleServers(chjobs)
-	ticker := time.NewTicker(time.Duration(conf.Args.ProbeInterval) * time.Second)
+	probeTk := time.NewTicker(time.Duration(conf.Args.ProbeInterval) * time.Second)
+	evictTk := time.NewTicker(time.Duration(conf.Args.EvictionInterval) * time.Second)
 	quit := make(chan struct{})
 	for {
 		select {
-		case <-ticker.C:
+		case <-probeTk.C:
 			queryStaleServers(chjobs)
+		case <-evictTk.C:
+			evictStaleServers()
 		case <-quit:
-			ticker.Stop()
+			probeTk.Stop()
+			evictTk.Stop()
 			return
 		}
 	}
