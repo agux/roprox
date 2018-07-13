@@ -49,7 +49,7 @@ func (f CoolProxy) RefreshInterval() int {
 
 //ScanItem process each item found in the table determined by ListSelector().
 func (f CoolProxy) ScanItem(i int, s *goquery.Selection) (ps *types.ProxyServer) {
-	if s.Size() < 5 {
+	if s.Find("td").Length() < 5 {
 		//skip promotion row
 		return
 	}
