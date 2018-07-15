@@ -5,10 +5,13 @@ import (
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/carusyte/roprox/types"
+	"github.com/sirupsen/logrus"
 )
 
 //GatherProxy fetches proxy server from http://www.gatherproxy.com
 type GatherProxy struct{}
+
+//TODO: need web driver to parse dynamic content
 
 //UID returns the unique identifier for this spec.
 func (f GatherProxy) UID() string {
@@ -48,10 +51,13 @@ func (f GatherProxy) RefreshInterval() int {
 
 //ScanItem process each item found in the table determined by ListSelector().
 func (f GatherProxy) ScanItem(i int, s *goquery.Selection) (ps *types.ProxyServer) {
+	logrus.Debug(s.Find("td:nth-child(2)").Text())
+	logrus.Debug(s.Attr("prx"))
 	if i < 2 {
 		//skip headers
 		return
 	}
+
 	anon := strings.TrimSpace(s.Find("td:nth-child(4)").Text())
 	if strings.EqualFold(anon, "transparent") {
 		return

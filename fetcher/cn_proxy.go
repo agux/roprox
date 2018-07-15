@@ -19,7 +19,7 @@ func (f CNProxy) UID() string {
 func (f CNProxy) Urls() []string {
 	return []string{
 		`http://cn-proxy.com/`,
-		`http://cn-proxy.com/archives/218`,
+		`http://cn-proxy.com/archives/218`,  //FIXME: get 0 proxy
 	}
 }
 

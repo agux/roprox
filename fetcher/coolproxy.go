@@ -1,12 +1,18 @@
 package fetcher
 
 import (
+	"encoding/base64"
+	"regexp"
 	"strings"
+
+	"github.com/sirupsen/logrus"
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/carusyte/roprox/types"
+	"github.com/carusyte/roprox/util"
 )
 
+//FIXME: get 0 proxy
 //CoolProxy fetches proxy server from https://www.cool-proxy.net/
 type CoolProxy struct{}
 
@@ -38,7 +44,7 @@ func (f CoolProxy) UseMasterProxy() bool {
 //ListSelector returns the jQuery selector for searching the proxy server list/table.
 func (f CoolProxy) ListSelector() []string {
 	return []string{
-		"#main table tbody tr:nth-child(2)",
+		"#main table tbody tr",
 	}
 }
 
@@ -49,11 +55,30 @@ func (f CoolProxy) RefreshInterval() int {
 
 //ScanItem process each item found in the table determined by ListSelector().
 func (f CoolProxy) ScanItem(i int, s *goquery.Selection) (ps *types.ProxyServer) {
+	if i < 1 {
+		//skip header
+		return
+	}
 	if s.Find("td").Length() < 5 {
 		//skip promotion row
 		return
 	}
-	host := strings.TrimSpace(s.Find("td:nth-child(1)").Text())
+	//remove script node
+	script := strings.TrimSpace(s.Find("td:nth-child(1) script").Text())
+	r := regexp.MustCompile(`str_rot13\("(.*)"\)`).FindStringSubmatch(script)
+	host := ""
+	if len(r) > 0 {
+		hash := util.Rot13(r[len(r)-1])
+		hostBytes, err := base64.StdEncoding.DecodeString(hash)
+		if err != nil {
+			logrus.Errorf("%s unable to decode base64 host string: %s", f.UID(), hash)
+			return
+		}
+		host = string(hostBytes)
+	} else {
+		logrus.Errorf(`%s unable to parse script: %s`, f.UID(), script)
+		return
+	}
 	port := strings.TrimSpace(s.Find("td:nth-child(2)").Text())
 	ps = types.NewProxyServer(f.UID(), host, port, "http")
 	return

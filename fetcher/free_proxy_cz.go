@@ -1,10 +1,13 @@
 package fetcher
 
 import (
+	"encoding/base64"
+	"regexp"
 	"strings"
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/carusyte/roprox/types"
+	"github.com/sirupsen/logrus"
 )
 
 //FreeProxyCZ fetches proxy server from http://free-proxy.cz
@@ -59,8 +62,21 @@ func (f FreeProxyCZ) ScanItem(i int, s *goquery.Selection) (ps *types.ProxyServe
 	if strings.EqualFold(anon, "transparent") {
 		return
 	}
-	//must remove script node
-	host := strings.TrimSpace(s.Find("td:nth-child(1)").Clone().Children().Remove().End().Text())
+	script := strings.TrimSpace(s.Find("td:nth-child(1) script").Text())
+	r := regexp.MustCompile(`Base64\.decode\("(.*)"\)`).FindStringSubmatch(script)
+	host := ""
+	if len(r) > 0 {
+		hash := r[len(r)-1]
+		hostBytes, err := base64.StdEncoding.DecodeString(hash)
+		if err != nil {
+			logrus.Errorf("%s unable to decode base64 host string: %s", f.UID(), hash)
+			return
+		}
+		host = string(hostBytes)
+	} else {
+		logrus.Errorf(`%s unable to parse script: %s`, f.UID(), script)
+		return
+	}
 	port := strings.TrimSpace(s.Find("td:nth-child(2) span").Text())
 	ps = types.NewProxyServer(f.UID(), host, port, "http")
 	return

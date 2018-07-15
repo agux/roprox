@@ -1,10 +1,13 @@
 package fetcher
 
 import (
+	"encoding/base64"
+	"regexp"
 	"strings"
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/carusyte/roprox/types"
+	"github.com/sirupsen/logrus"
 )
 
 //ProxyListOrg fetches proxy server from https://proxy-list.org
@@ -53,10 +56,26 @@ func (f ProxyListOrg) ScanItem(i int, s *goquery.Selection) (ps *types.ProxyServ
 	if strings.EqualFold(anon, "transparent") {
 		return
 	}
-	//must remove script node
-	val := strings.TrimSpace(s.Find("li.proxy").Clone().Children().Remove().End().Text())
+
+	script := strings.TrimSpace(s.Find("li.proxy script").Text())
+	r := regexp.MustCompile(`Proxy\('(.*)'\)`).FindStringSubmatch(script)
+	val := ""
+	if len(r) > 0 {
+		hash := r[len(r)-1]
+		hostBytes, err := base64.StdEncoding.DecodeString(hash)
+		if err != nil {
+			logrus.Errorf("%s unable to decode base64 host string: %s", f.UID(), hash)
+			return
+		}
+		val = string(hostBytes)
+	} else {
+		logrus.Errorf(`%s unable to parse script: %s`, f.UID(), script)
+		return
+	}
+
 	strs := strings.Split(val, ":")
 	if len(strs) != 2 {
+		logrus.Errorf("unable to parse host:port string: %s", val)
 		return
 	}
 	host := strs[0]

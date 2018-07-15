@@ -6,7 +6,7 @@ import (
 	"github.com/PuerkitoBio/goquery"
 	"github.com/carusyte/roprox/types"
 )
-
+//FIXME: get 0 proxy
 //ProxyDB fetches proxy server from http://proxydb.net/
 type ProxyDB struct{}
 
