@@ -72,12 +72,22 @@ func collectProxyServer(wgs *sync.WaitGroup, chpx <-chan *t.ProxyServer) {
 				saveProxyServer(bucket)
 				bucket = make([]*t.ProxyServer, 0, size)
 			}
-		case ps := <-chpx:
-			if len(bucket) < size {
+		case ps, ok := <-chpx:
+			if ok {
 				bucket = append(bucket, ps)
+				if len(bucket) >= size {
+					saveProxyServer(bucket)
+					bucket = make([]*t.ProxyServer, 0, size)
+				}
+			} else {
+				//channel has been closed
+				ticker.Stop()
+				if len(bucket) > 0 {
+					saveProxyServer(bucket)
+					bucket = nil
+				}
+				break
 			}
-			saveProxyServer(bucket)
-			bucket = make([]*t.ProxyServer, 0, size)
 		}
 	}
 }
