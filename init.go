@@ -2,8 +2,10 @@ package main
 
 import (
 	"database/sql"
+	"fmt"
 	"time"
 
+	"github.com/carusyte/roprox/conf"
 	"github.com/go-gorp/gorp"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/sirupsen/logrus"
@@ -17,7 +19,12 @@ func init() {
 	// connect to db using standard Go database/sql API
 	// use whatever database/sql driver you wish
 	// db, err := sql.Open("mysql", "tcp:localhost:3306*secu/mysql/123456")
-	mysql, err := sql.Open("mysql", "mysql:123456@/secu")
+	usr := conf.Args.Database.UserName
+	pwd := conf.Args.Database.Password
+	host := conf.Args.Database.Host
+	port := conf.Args.Database.Port
+	sch := conf.Args.Database.Schema
+	mysql, err := sql.Open("mysql", fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?readTimeout=12h&writeTimeout=12h", usr, pwd, host, port, sch))
 	if err != nil {
 		logrus.Panicln("sql.Open failed", err)
 	}

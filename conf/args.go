@@ -21,6 +21,14 @@ type Arguments struct {
 	EvictionTimeout  int    `mapstructure:"eviction_timeout"`
 	EvictionInterval int    `mapstructure:"eviction_interval"`
 	EvictionFailure  int    `mapstructure:"eviction_failure"`
+
+	Database          struct {
+		Host     string `mapstructure:"host"`
+		Port     int    `mapstructure:"port"`
+		Schema   string `mapstructure:"schema"`
+		UserName string `mapstructure:"user_name"`
+		Password string `mapstructure:"password"`
+	}
 	//TODO logrus log to file
 }
 
