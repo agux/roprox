@@ -1,6 +1,8 @@
 package conf
 
 import (
+	"go/build"
+
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 )
@@ -23,8 +25,8 @@ type Arguments struct {
 	EvictionFailure  int    `mapstructure:"eviction_failure"`
 
 	DataSource struct {
-		UserAgents        string   `mapstructure:"user_agents"`
-		UserAgentLifespan int `mapstructure:"user_agent_lifespan"`
+		UserAgents        string `mapstructure:"user_agents"`
+		UserAgentLifespan int    `mapstructure:"user_agent_lifespan"`
 	}
 
 	Database struct {
@@ -43,6 +45,7 @@ func init() {
 	viper.AddConfigPath("$GOPATH/bin")
 	viper.AddConfigPath(".") // optionally look for config in the working directory
 	viper.AddConfigPath("$HOME")
+	viper.AddConfigPath(build.Default.GOPATH)
 	err := viper.ReadInConfig()
 	if err != nil {
 		logrus.Errorf("config file error: %+v", err)
