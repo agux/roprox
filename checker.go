@@ -7,6 +7,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/carusyte/roprox/conf"
+	"github.com/carusyte/roprox/data"
 	"github.com/carusyte/roprox/types"
 	"github.com/carusyte/roprox/util"
 )
@@ -22,7 +23,7 @@ func check(wg *sync.WaitGroup) {
 func evictBrokenServers() {
 	logrus.Debug("evicting broken servers...")
 	delete := `delete from proxy_list where status = ? and (last_scanned <= ? or fail >= ?)`
-	r, e := db.Exec(delete, types.FAIL, time.Now().Add(
+	r, e := data.DB.Exec(delete, types.FAIL, time.Now().Add(
 		-time.Duration(conf.Args.EvictionTimeout)*time.Second).Format(util.DateTimeFormat),
 		conf.Args.EvictionFailure)
 	if e != nil {
@@ -69,7 +70,7 @@ func queryStaleServers(chjobs chan<- *types.ProxyServer) {
 					last_check <= ?
 					order by last_check`
 	//TODO do we need to filter out failed servers to lower the workload?
-	_, e := db.Select(&list, query, time.Now().Add(
+	_, e := data.DB.Select(&list, query, time.Now().Add(
 		-time.Duration(conf.Args.ProbeInterval)*time.Second).Format(util.DateTimeFormat))
 	if e != nil {
 		logrus.Errorln("failed to query stale proxy servers", e)
@@ -87,11 +88,11 @@ func probe(chjobs <-chan *types.ProxyServer) {
 			for ps := range chjobs {
 				var e error
 				if util.ValidateProxy(ps.Type, ps.Host, ps.Port) {
-					_, e = db.Exec(`update proxy_list set status = ?, `+
+					_, e = data.DB.Exec(`update proxy_list set status = ?, `+
 						`fail = 0, last_check = ? where host = ? and port = ?`,
 						types.OK, util.Now(), ps.Host, ps.Port)
 				} else {
-					_, e = db.Exec(`update proxy_list set status = ?, `+
+					_, e = data.DB.Exec(`update proxy_list set status = ?, `+
 						`fail = fail + 1, last_check = ? where host = ? and port = ?`,
 						types.FAIL, util.Now(), ps.Host, ps.Port)
 				}

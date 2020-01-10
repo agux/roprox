@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/carusyte/roprox/conf"
+	"github.com/carusyte/roprox/data"
 	"github.com/carusyte/roprox/fetcher"
 	t "github.com/carusyte/roprox/types"
 	"github.com/sirupsen/logrus"
@@ -115,7 +116,7 @@ func saveProxyServer(bucket []*t.ProxyServer) {
 	retry := 10
 	rt := 0
 	for ; rt < retry; rt++ {
-		_, err := db.Exec(stmt, valueArgs...)
+		_, err := data.DB.Exec(stmt, valueArgs...)
 		if err != nil {
 			logrus.Println(err)
 			if strings.Contains(err.Error(), "Deadlock") {
