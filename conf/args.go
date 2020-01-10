@@ -2,6 +2,7 @@ package conf
 
 import (
 	"go/build"
+	"path/filepath"
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
@@ -43,9 +44,9 @@ func init() {
 	setDefaults()
 	viper.SetConfigName("roprox") // name of config file (without extension)
 	viper.AddConfigPath("$GOPATH/bin")
+	viper.AddConfigPath(filepath.Join(build.Default.GOPATH, "bin"))
 	viper.AddConfigPath(".") // optionally look for config in the working directory
 	viper.AddConfigPath("$HOME")
-	viper.AddConfigPath(build.Default.GOPATH)
 	err := viper.ReadInConfig()
 	if err != nil {
 		logrus.Errorf("config file error: %+v", err)
