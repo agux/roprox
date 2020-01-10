@@ -3,9 +3,9 @@ package types
 import (
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/PuerkitoBio/goquery"
-	"github.com/carusyte/roprox/util"
 	"github.com/sirupsen/logrus"
 )
 
@@ -16,6 +16,8 @@ const (
 	FAIL = "FAIL"
 	//UNK indicators the proxy server status is unknown.
 	UNK = "UNK"
+	//DateTimeFormat the default date time format string in go
+	DateTimeFormat = "2006-01-02 15:04:05"
 )
 
 //ProxyServer is a model mapping for database table proxy_list
@@ -47,8 +49,8 @@ func NewProxyServer(source, host, port, stype string) *ProxyServer {
 		Type:        stype,
 		Status:      UNK,
 		Fail:        0,
-		LastCheck:   util.Now(),
-		LastScanned: util.Now(),
+		LastCheck:   time.Now().Format(DateTimeFormat),
+		LastScanned: time.Now().Format(DateTimeFormat),
 	}
 }
 
@@ -69,4 +71,28 @@ type FetcherSpec interface {
 	RefreshInterval() int
 	//ScanItem process each item found in the table determined by ListSelector().
 	ScanItem(i int, s *goquery.Selection) (ps *ProxyServer)
+}
+
+//UserAgent represents user_agent table structure.
+type UserAgent struct {
+	ID                   string
+	UserAgent            string    `db:"user_agent"`
+	TimesSeen            string    `db:"times_seen"`
+	SimpleSoftwareString string    `db:"simple_software_string"`
+	SoftwareName         string    `db:"software_name"`
+	SoftwareVersion      string    `db:"software_version"`
+	SoftwareType         string    `db:"software_type"`
+	SoftwareSubType      string    `db:"software_sub_type"`
+	HardWareType         string    `db:"hardware_type"`
+	FirstSeenAt          string    `db:"first_seen_at"`
+	LastSeenAt           string    `db:"last_seen_at"`
+	UpdatedAt            string `db:"updated_at"`
+}
+
+func (ua *UserAgent) String() string {
+	j, e := json.Marshal(ua)
+	if e != nil {
+		logrus.Error(e)
+	}
+	return fmt.Sprintf("%v", string(j))
 }

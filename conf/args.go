@@ -22,7 +22,12 @@ type Arguments struct {
 	EvictionInterval int    `mapstructure:"eviction_interval"`
 	EvictionFailure  int    `mapstructure:"eviction_failure"`
 
-	Database          struct {
+	DataSource struct {
+		UserAgents        string   `mapstructure:"user_agents"`
+		UserAgentLifespan int `mapstructure:"user_agent_lifespan"`
+	}
+
+	Database struct {
 		Host     string `mapstructure:"host"`
 		Port     int    `mapstructure:"port"`
 		Schema   string `mapstructure:"schema"`
@@ -48,7 +53,7 @@ func init() {
 		logrus.Errorf("config file error: %+v", err)
 		return
 	}
-	logrus.Printf("Configuration: %+v", Args)
+	// logrus.Printf("Configuration: %+v", Args)
 	switch Args.LogLevel {
 	case "debug":
 		logrus.SetLevel(logrus.DebugLevel)
