@@ -25,6 +25,10 @@ type Arguments struct {
 	EvictionInterval int    `mapstructure:"eviction_interval"`
 	EvictionFailure  int    `mapstructure:"eviction_failure"`
 
+	Logging struct {
+		LogFilePath string `mapstructure:"log_file_path"`
+	}
+
 	DataSource struct {
 		UserAgents        string `mapstructure:"user_agents"`
 		UserAgentLifespan int    `mapstructure:"user_agent_lifespan"`

@@ -16,3 +16,17 @@ eviction_interval = 600
 eviction_timeout = 1800
 #evict failed state proxy with count >= 3
 eviction_failure = 3
+
+[Logging]
+log_file_path = "~/roprox.log"
+
+[DataSource]
+user_agents = "https://developers.whatismybrowser.com/api/docs/latest/user-agent-database-dump-url-csv-sample.tar.gz"
+user_agent_lifespan = 10
+
+[Database]
+host = "127.0.0.1"
+port = 3306
+schema = "db"
+user_name = "mysql"
+password = "password"
