@@ -6,8 +6,10 @@ import (
 	"time"
 
 	"github.com/PuerkitoBio/goquery"
-	"github.com/sirupsen/logrus"
+	"github.com/carusyte/roprox/logging"
 )
+
+var log = logging.Logger
 
 const (
 	//OK indicates the proxy server is available per the last check result
@@ -35,7 +37,7 @@ type ProxyServer struct {
 func (p *ProxyServer) String() string {
 	j, e := json.Marshal(p)
 	if e != nil {
-		logrus.Error(e)
+		log.Error(e)
 	}
 	return fmt.Sprintf("%v", string(j))
 }
@@ -76,23 +78,23 @@ type FetcherSpec interface {
 //UserAgent represents user_agent table structure.
 type UserAgent struct {
 	ID                   string
-	UserAgent            string    `db:"user_agent"`
-	TimesSeen            string    `db:"times_seen"`
-	SimpleSoftwareString string    `db:"simple_software_string"`
-	SoftwareName         string    `db:"software_name"`
-	SoftwareVersion      string    `db:"software_version"`
-	SoftwareType         string    `db:"software_type"`
-	SoftwareSubType      string    `db:"software_sub_type"`
-	HardWareType         string    `db:"hardware_type"`
-	FirstSeenAt          string    `db:"first_seen_at"`
-	LastSeenAt           string    `db:"last_seen_at"`
+	UserAgent            string `db:"user_agent"`
+	TimesSeen            string `db:"times_seen"`
+	SimpleSoftwareString string `db:"simple_software_string"`
+	SoftwareName         string `db:"software_name"`
+	SoftwareVersion      string `db:"software_version"`
+	SoftwareType         string `db:"software_type"`
+	SoftwareSubType      string `db:"software_sub_type"`
+	HardWareType         string `db:"hardware_type"`
+	FirstSeenAt          string `db:"first_seen_at"`
+	LastSeenAt           string `db:"last_seen_at"`
 	UpdatedAt            string `db:"updated_at"`
 }
 
 func (ua *UserAgent) String() string {
 	j, e := json.Marshal(ua)
 	if e != nil {
-		logrus.Error(e)
+		log.Error(e)
 	}
 	return fmt.Sprintf("%v", string(j))
 }

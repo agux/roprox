@@ -6,7 +6,6 @@ import (
 	"encoding/csv"
 	"fmt"
 	"io"
-	"log"
 	"math/rand"
 	"net/http"
 	"os"
@@ -18,7 +17,6 @@ import (
 	"github.com/carusyte/roprox/conf"
 	"github.com/carusyte/roprox/data"
 	"github.com/carusyte/roprox/types"
-	"github.com/sirupsen/logrus"
 	"github.com/ssgreg/repeat"
 )
 
@@ -54,7 +52,7 @@ func PickUserAgent() (ua string, e error) {
 	//if none, or outdated, refresh table from remote server
 	if refresh || len(agents) == 0 {
 		//download sample file and load into database server
-		logrus.Info("fetching user agent list from remote server...")
+		log.Info("fetching user agent list from remote server...")
 		exePath, e := os.Executable()
 		if e != nil {
 			log.Panicln("failed to get executable path", e)
@@ -77,7 +75,7 @@ func PickUserAgent() (ua string, e error) {
 			log.Panicln("failed to download and read csv, ", local, e)
 		}
 		mergeAgents(agents)
-		logrus.Infof("successfully fetched %d user agents from remote server.", len(agentPool))
+		log.Infof("successfully fetched %d user agents from remote server.", len(agentPool))
 		//reload agents from database
 		agents = loadUserAgents()
 	}

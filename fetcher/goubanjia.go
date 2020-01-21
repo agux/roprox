@@ -6,7 +6,6 @@ import (
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/carusyte/roprox/types"
-	"github.com/sirupsen/logrus"
 )
 
 //GouBanJia fetches proxy server from http://www.goubanjia.com/
@@ -58,7 +57,7 @@ func (f GouBanJia) ScanItem(i int, s *goquery.Selection) (ps *types.ProxyServer)
 			if ok {
 				m, e := regexp.MatchString(`.*display\s*:\s*none;?`, style)
 				if e != nil {
-					logrus.Error("failed to regexp match", style)
+					log.Error("failed to regexp match", style)
 					return
 				}
 				if m {

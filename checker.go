@@ -4,8 +4,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/sirupsen/logrus"
-
 	"github.com/carusyte/roprox/conf"
 	"github.com/carusyte/roprox/data"
 	"github.com/carusyte/roprox/types"
@@ -21,21 +19,21 @@ func check(wg *sync.WaitGroup) {
 }
 
 func evictBrokenServers() {
-	logrus.Debug("evicting broken servers...")
+	log.Debug("evicting broken servers...")
 	delete := `delete from proxy_list where status = ? and (last_scanned <= ? or fail >= ?)`
 	r, e := data.DB.Exec(delete, types.FAIL, time.Now().Add(
 		-time.Duration(conf.Args.EvictionTimeout)*time.Second).Format(util.DateTimeFormat),
 		conf.Args.EvictionFailure)
 	if e != nil {
-		logrus.Errorln("failed to evict broken proxy servers", e)
+		log.Errorln("failed to evict broken proxy servers", e)
 		return
 	}
 	ra, e := r.RowsAffected()
 	if e != nil {
-		logrus.Warnf("unable to get rows affected after eviction", e)
+		log.Warnf("unable to get rows affected after eviction", e)
 		return
 	}
-	logrus.Debugf("%d broken servers evicted", ra)
+	log.Debugf("%d broken servers evicted", ra)
 }
 
 func collectStaleServers(chjobs chan<- *types.ProxyServer) {
@@ -60,7 +58,7 @@ func collectStaleServers(chjobs chan<- *types.ProxyServer) {
 }
 
 func queryStaleServers(chjobs chan<- *types.ProxyServer) {
-	logrus.Debug("collecting stale servers...")
+	log.Debug("collecting stale servers...")
 	var list []*types.ProxyServer
 	query := `SELECT 
 					*
@@ -73,10 +71,10 @@ func queryStaleServers(chjobs chan<- *types.ProxyServer) {
 	_, e := data.DB.Select(&list, query, time.Now().Add(
 		-time.Duration(conf.Args.ProbeInterval)*time.Second).Format(util.DateTimeFormat))
 	if e != nil {
-		logrus.Errorln("failed to query stale proxy servers", e)
+		log.Errorln("failed to query stale proxy servers", e)
 		return
 	}
-	logrus.Debugf("%d stale servers pending for health check", len(list))
+	log.Debugf("%d stale servers pending for health check", len(list))
 	for _, p := range list {
 		chjobs <- p
 	}
@@ -97,7 +95,7 @@ func probe(chjobs <-chan *types.ProxyServer) {
 						types.FAIL, util.Now(), ps.Host, ps.Port)
 				}
 				if e != nil {
-					logrus.Errorln("failed to update proxy server status", e)
+					log.Errorln("failed to update proxy server status", e)
 				}
 			}
 		}()

@@ -10,7 +10,6 @@ import (
 	"github.com/carusyte/roprox/data"
 	"github.com/carusyte/roprox/fetcher"
 	t "github.com/carusyte/roprox/types"
-	"github.com/sirupsen/logrus"
 )
 
 func scan(wg *sync.WaitGroup) {
@@ -40,7 +39,7 @@ func launchDispatcher(chjobs chan<- string) {
 			for {
 				select {
 				case <-ticker.C:
-					logrus.Debugf("refreshing list from source %s", fs.UID())
+					log.Debugf("refreshing list from source %s", fs.UID())
 					chjobs <- fs.UID()
 				case <-quit:
 					ticker.Stop()
@@ -118,17 +117,17 @@ func saveProxyServer(bucket []*t.ProxyServer) {
 	for ; rt < retry; rt++ {
 		_, err := data.DB.Exec(stmt, valueArgs...)
 		if err != nil {
-			logrus.Println(err)
+			log.Println(err)
 			if strings.Contains(err.Error(), "Deadlock") {
 				continue
 			} else {
-				logrus.Errorln("failed to update proxy_list", err)
+				log.Errorln("failed to update proxy_list", err)
 				break
 			}
 		}
 		break
 	}
 	if rt >= retry {
-		logrus.Errorln("failed to update proxy_list")
+		log.Errorln("failed to update proxy_list")
 	}
 }

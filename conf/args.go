@@ -2,9 +2,10 @@ package conf
 
 import (
 	"go/build"
+	"os"
+	"log"
 	"path/filepath"
 
-	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 )
 
@@ -47,35 +48,22 @@ type Arguments struct {
 func init() {
 	setDefaults()
 	viper.SetConfigName("roprox") // name of config file (without extension)
-	viper.AddConfigPath("$GOPATH/bin")
-	viper.AddConfigPath(filepath.Join(build.Default.GOPATH, "bin"))
+	gopath := os.Getenv("GOPATH")
+	if "" == gopath {
+		gopath = build.Default.GOPATH
+	}
+	viper.AddConfigPath(filepath.Join(gopath, "bin"))
 	viper.AddConfigPath(".") // optionally look for config in the working directory
-	viper.AddConfigPath("$HOME")
+	// viper.AddConfigPath("$HOME")
 	err := viper.ReadInConfig()
 	if err != nil {
-		logrus.Errorf("config file error: %+v", err)
-		return
+		log.Panicf("config file error: %+v", err)
 	}
 	err = viper.Unmarshal(&Args)
 	if err != nil {
-		logrus.Errorf("config file error: %+v", err)
-		return
+		log.Panicf("config file error: %+v", err)
 	}
-	// logrus.Printf("Configuration: %+v", Args)
-	switch Args.LogLevel {
-	case "debug":
-		logrus.SetLevel(logrus.DebugLevel)
-	case "info":
-		logrus.SetLevel(logrus.InfoLevel)
-	case "warning":
-		logrus.SetLevel(logrus.WarnLevel)
-	case "error":
-		logrus.SetLevel(logrus.ErrorLevel)
-	case "fatal":
-		logrus.SetLevel(logrus.FatalLevel)
-	case "panic":
-		logrus.SetLevel(logrus.PanicLevel)
-	}
+	// log.Printf("Configuration: %+v", Args)
 	//viper.WatchConfig()
 	//viper.OnConfigChange(func(e fsnotify.Event) {
 	//	fmt.Println("Config file changed:", e.Name)

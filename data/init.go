@@ -6,15 +6,17 @@ import (
 	"time"
 
 	"github.com/carusyte/roprox/conf"
+	"github.com/carusyte/roprox/logging"
 	"github.com/go-gorp/gorp"
+
 	//the mysql driver
 	_ "github.com/go-sql-driver/mysql"
-	"github.com/sirupsen/logrus"
 )
 
 var (
 	//DB the database instance
-	DB *gorp.DbMap
+	DB  *gorp.DbMap
+	log = logging.Logger
 )
 
 func init() {
@@ -28,7 +30,7 @@ func init() {
 	sch := conf.Args.Database.Schema
 	mysql, err := sql.Open("mysql", fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?readTimeout=12h&writeTimeout=12h", usr, pwd, host, port, sch))
 	if err != nil {
-		logrus.Panicln("sql.Open failed", err)
+		log.Panicln("sql.Open failed", err)
 	}
 
 	mysql.SetMaxOpenConns(16)
@@ -40,6 +42,6 @@ func init() {
 
 	err = mysql.Ping()
 	if err != nil {
-		logrus.Panic("Failed to ping db", err)
+		log.Panic("Failed to ping db", err)
 	}
 }

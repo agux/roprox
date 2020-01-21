@@ -11,7 +11,6 @@ import (
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/carusyte/roprox/conf"
-	"github.com/sirupsen/logrus"
 	"golang.org/x/net/proxy"
 )
 
@@ -35,11 +34,11 @@ func ValidateProxy(stype, host, port string) bool {
 		}
 	}()
 	if err != nil {
-		logrus.Warnf("%s failed: %+v", addr, err)
+		log.Warnf("%s failed: %+v", addr, err)
 		return false
 	}
 	if conn == nil {
-		logrus.Warnf("%s timed out", addr)
+		log.Warnf("%s timed out", addr)
 		return false
 	}
 
@@ -49,7 +48,7 @@ func ValidateProxy(stype, host, port string) bool {
 	if strings.EqualFold("socks5", stype) {
 		dialer, err := proxy.SOCKS5("tcp", addr, nil, proxy.Direct)
 		if err != nil {
-			logrus.Warnln(addr, " failed, ", err)
+			log.Warnln(addr, " failed, ", err)
 			return false
 		}
 		httpTransport := &http.Transport{Dial: dialer.Dial}
@@ -58,19 +57,19 @@ func ValidateProxy(stype, host, port string) bool {
 		addr = fmt.Sprintf("%s://%s:%s", stype, host, port)
 		proxyURL, e := url.Parse(addr)
 		if e != nil {
-			logrus.Errorf("invalid proxy address: %s, %+v", addr, e)
+			log.Errorf("invalid proxy address: %s, %+v", addr, e)
 			return false
 		}
 		client = &http.Client{
 			Timeout:   timeout,
 			Transport: &http.Transport{Proxy: http.ProxyURL(proxyURL)}}
 	} else {
-		logrus.Warn("proxy protocol checking not supported", stype)
+		log.Warn("proxy protocol checking not supported", stype)
 	}
 
 	req, err := http.NewRequest(http.MethodGet, link, nil)
 	if err != nil {
-		logrus.Warnf("%s failed to create get request: %+v", addr, err)
+		log.Warnf("%s failed to create get request: %+v", addr, err)
 	}
 
 	req.Header.Set("Accept", "text/html,application/xhtml+xml,"+
@@ -83,7 +82,7 @@ func ValidateProxy(stype, host, port string) bool {
 	req.Header.Set("Upgrade-Insecure-Requests", "1")
 	uagent, e := PickUserAgent()
 	if e != nil {
-		logrus.Errorln("failed to acquire rotate user agent, using default value", e)
+		log.Errorln("failed to acquire rotate user agent, using default value", e)
 		uagent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_1) " +
 			"AppleWebKit/537.36 (KHTML, like Gecko) Chrome/62.0.3202.94 Safari/537.36"
 	}
@@ -91,21 +90,21 @@ func ValidateProxy(stype, host, port string) bool {
 
 	res, err := client.Do(req)
 	if err != nil {
-		logrus.Warnf("%s failed to visit validation site: %+v", addr, err)
+		log.Warnf("%s failed to visit validation site: %+v", addr, err)
 		return false
 	}
 	defer res.Body.Close()
 
 	doc, e := goquery.NewDocumentFromReader(res.Body)
 	if e != nil {
-		logrus.Warnf("%s failed to read validation site's response body: %+v", addr, e)
+		log.Warnf("%s failed to read validation site's response body: %+v", addr, e)
 		return false
 	}
 	size := doc.Find("#wrapper").Size()
 	if size > 0 {
-		logrus.Debugf("%s success", addr)
+		log.Debugf("%s success", addr)
 		return true
 	}
-	logrus.Warnf("%s failed to identify target on validation site", addr)
+	log.Warnf("%s failed to identify target on validation site", addr)
 	return false
 }

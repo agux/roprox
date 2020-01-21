@@ -4,7 +4,6 @@ import (
 	"io"
 
 	"github.com/PuerkitoBio/goquery"
-	"github.com/sirupsen/logrus"
 
 	//shorten type reference
 	t "github.com/carusyte/roprox/types"
@@ -28,10 +27,10 @@ func fetchFor(i int, url string, chpx chan<- *t.ProxyServer, fspec t.FetcherSpec
 	selectors := fspec.ListSelector()
 	sel := ""
 
-	logrus.Infof("fetching proxy server from %s", url)
+	log.Infof("fetching proxy server from %s", url)
 	res, e := util.HTTPGetResponse(url, nil, useMasterProxy, true)
 	if e != nil {
-		logrus.Errorf("failed to get free proxy list from %s, giving up %+v", url, e)
+		log.Errorf("failed to get free proxy list from %s, giving up %+v", url, e)
 		return
 	}
 	defer res.Body.Close()
@@ -44,7 +43,7 @@ func fetchFor(i int, url string, chpx chan<- *t.ProxyServer, fspec t.FetcherSpec
 	}
 	doc, e := goquery.NewDocumentFromReader(body)
 	if e != nil {
-		logrus.Errorf("failed to read response body from %s: %+v", url, e)
+		log.Errorf("failed to read response body from %s: %+v", url, e)
 		return
 	}
 	count := 0
@@ -54,6 +53,7 @@ func fetchFor(i int, url string, chpx chan<- *t.ProxyServer, fspec t.FetcherSpec
 	} else {
 		sel = selectors[len(selectors)-1]
 	}
+
 	doc.Find(sel).Each(
 		func(i int, s *goquery.Selection) {
 			ps := fspec.ScanItem(i, s)
@@ -62,5 +62,5 @@ func fetchFor(i int, url string, chpx chan<- *t.ProxyServer, fspec t.FetcherSpec
 				count++
 			}
 		})
-	logrus.Infof("%d proxies available from %s", count, url)
+	log.Infof("%d proxies available from %s", count, url)
 }

@@ -7,7 +7,6 @@ import (
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/carusyte/roprox/types"
-	"github.com/sirupsen/logrus"
 )
 
 //ProxyListOrg fetches proxy server from https://proxy-list.org
@@ -64,18 +63,18 @@ func (f ProxyListOrg) ScanItem(i int, s *goquery.Selection) (ps *types.ProxyServ
 		hash := r[len(r)-1]
 		hostBytes, err := base64.StdEncoding.DecodeString(hash)
 		if err != nil {
-			logrus.Errorf("%s unable to decode base64 host string: %s", f.UID(), hash)
+			log.Errorf("%s unable to decode base64 host string: %s", f.UID(), hash)
 			return
 		}
 		val = string(hostBytes)
 	} else {
-		logrus.Errorf(`%s unable to parse script: %s`, f.UID(), script)
+		log.Errorf(`%s unable to parse script: %s`, f.UID(), script)
 		return
 	}
 
 	strs := strings.Split(val, ":")
 	if len(strs) != 2 {
-		logrus.Errorf("unable to parse host:port string: %s", val)
+		log.Errorf("unable to parse host:port string: %s", val)
 		return
 	}
 	host := strs[0]

@@ -5,7 +5,6 @@ import (
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/carusyte/roprox/types"
-	"github.com/sirupsen/logrus"
 )
 
 //GatherProxy fetches proxy server from http://www.gatherproxy.com
@@ -23,6 +22,7 @@ func (f GatherProxy) Urls() []string {
 	return []string{
 		`http://www.gatherproxy.com/proxylist/anonymity/?t=Elite`,
 		`http://www.gatherproxy.com/proxylist/anonymity/?t=Anonymous`,
+		`http://www.gatherproxy.com/proxylist/country/?c=China`,
 	}
 }
 
@@ -51,8 +51,8 @@ func (f GatherProxy) RefreshInterval() int {
 
 //ScanItem process each item found in the table determined by ListSelector().
 func (f GatherProxy) ScanItem(i int, s *goquery.Selection) (ps *types.ProxyServer) {
-	logrus.Debug(s.Find("td:nth-child(2)").Text())
-	logrus.Debug(s.Attr("prx"))
+	log.Debug(s.Find("td:nth-child(2)").Text())
+	log.Debug(s.Attr("prx"))
 	if i < 2 {
 		//skip headers
 		return

@@ -6,7 +6,6 @@ import (
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/carusyte/roprox/types"
-	"github.com/sirupsen/logrus"
 )
 
 //SSLProxies fetches proxy server from https://www.sslproxies.org/
@@ -55,7 +54,7 @@ func (f SSLProxies) ScanItem(i int, s *goquery.Selection) (ps *types.ProxyServer
 				return
 			}
 		} else {
-			logrus.Errorf("failed to parse proxy last check string: %s, %+v", m, e)
+			log.Errorf("failed to parse proxy last check string: %s, %+v", m, e)
 			return
 		}
 	}

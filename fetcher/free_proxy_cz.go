@@ -7,7 +7,6 @@ import (
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/carusyte/roprox/types"
-	"github.com/sirupsen/logrus"
 )
 
 //FreeProxyCZ fetches proxy server from http://free-proxy.cz
@@ -26,6 +25,11 @@ func (f FreeProxyCZ) Urls() []string {
 		`http://free-proxy.cz/en/proxylist/main/3`,
 		`http://free-proxy.cz/en/proxylist/main/4`,
 		`http://free-proxy.cz/en/proxylist/main/5`,
+		`http://free-proxy.cz/en/proxylist/country/CN/all/ping/all`,
+		`http://free-proxy.cz/en/proxylist/country/CN/all/ping/all/2`,
+		`http://free-proxy.cz/en/proxylist/country/CN/all/ping/all/3`,
+		`http://free-proxy.cz/en/proxylist/country/CN/all/ping/all/4`,
+		`http://free-proxy.cz/en/proxylist/country/CN/all/ping/all/5`,
 	}
 }
 
@@ -69,12 +73,12 @@ func (f FreeProxyCZ) ScanItem(i int, s *goquery.Selection) (ps *types.ProxyServe
 		hash := r[len(r)-1]
 		hostBytes, err := base64.StdEncoding.DecodeString(hash)
 		if err != nil {
-			logrus.Errorf("%s unable to decode base64 host string: %s", f.UID(), hash)
+			log.Errorf("%s unable to decode base64 host string: %s", f.UID(), hash)
 			return
 		}
 		host = string(hostBytes)
 	} else {
-		logrus.Errorf(`%s unable to parse script: %s`, f.UID(), script)
+		log.Errorf(`%s unable to parse script: %s`, f.UID(), script)
 		return
 	}
 	port := strings.TrimSpace(s.Find("td:nth-child(2) span").Text())

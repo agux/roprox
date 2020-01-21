@@ -5,8 +5,6 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/sirupsen/logrus"
-
 	"github.com/PuerkitoBio/goquery"
 	"github.com/carusyte/roprox/types"
 	"github.com/carusyte/roprox/util"
@@ -71,12 +69,12 @@ func (f CoolProxy) ScanItem(i int, s *goquery.Selection) (ps *types.ProxyServer)
 		hash := util.Rot13(r[len(r)-1])
 		hostBytes, err := base64.StdEncoding.DecodeString(hash)
 		if err != nil {
-			logrus.Errorf("%s unable to decode base64 host string: %s", f.UID(), hash)
+			log.Errorf("%s unable to decode base64 host string: %s", f.UID(), hash)
 			return
 		}
 		host = string(hostBytes)
 	} else {
-		logrus.Errorf(`%s unable to parse script: %s`, f.UID(), script)
+		log.Errorf(`%s unable to parse script: %s`, f.UID(), script)
 		return
 	}
 	port := strings.TrimSpace(s.Find("td:nth-child(2)").Text())

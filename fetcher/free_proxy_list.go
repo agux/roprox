@@ -6,7 +6,6 @@ import (
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/carusyte/roprox/types"
-	"github.com/sirupsen/logrus"
 )
 
 //FreeProxyList fetches proxy server from https://free-proxy-list.net/
@@ -58,7 +57,7 @@ func (f FreeProxyList) ScanItem(i int, s *goquery.Selection) (ps *types.ProxySer
 				return
 			}
 		} else {
-			logrus.Errorf("failed to parse proxy last check string: %s, %+v", m, e)
+			log.Errorf("failed to parse proxy last check string: %s, %+v", m, e)
 			return
 		}
 	}
