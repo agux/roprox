@@ -6,9 +6,11 @@ import (
 	"github.com/PuerkitoBio/goquery"
 	"github.com/carusyte/roprox/types"
 )
-//FIXME: get 0 proxy
+
 //ProxyDB fetches proxy server from http://proxydb.net/
 type ProxyDB struct{}
+
+//FIXME: should use chromedp to fetch dynamic content (js must be run)
 
 //UID returns the unique identifier for this spec.
 func (f ProxyDB) UID() string {

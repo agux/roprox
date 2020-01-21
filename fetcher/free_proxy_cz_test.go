@@ -6,15 +6,15 @@ import (
 	"github.com/carusyte/roprox/types"
 )
 
-func TestFetch_GouBanJia(t *testing.T) {
+func TestFetch_FreeProxyCZ(t *testing.T) {
 	chpx := make(chan *types.ProxyServer, 100)
 	go func() {
 		for px := range chpx {
-			log.Debugf("extracted proxy: %+v", px)
+			log.Debugf("found proxy: %+v", px)
 		}
 	}()
-	gp := &GouBanJia{}
-	for i, url := range gp.Urls() {
-		fetchFor(i, url, chpx, gp)
+	p := &FreeProxyCZ{}
+	for i, url := range p.Urls() {
+		fetchFor(i, url, chpx, p)
 	}
 }

@@ -19,6 +19,10 @@ func (f IP3366) UID() string {
 func (f IP3366) Urls() []string {
 	return []string{
 		`http://www.ip3366.net/free/?stype=1`,
+		`http://www.ip3366.net/free/?stype=1&page=2`,
+		`http://www.ip3366.net/free/?stype=1&page=3`,
+		`http://www.ip3366.net/free/?stype=1&page=4`,
+		`http://www.ip3366.net/free/?stype=1&page=5`,
 	}
 }
 

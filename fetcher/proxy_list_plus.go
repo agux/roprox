@@ -18,10 +18,8 @@ func (f ProxyListPlus) UID() string {
 //Urls return the server urls that provide the free proxy server lists.
 func (f ProxyListPlus) Urls() []string {
 	return []string{
-		`https://list.proxylistplus.com/Fresh-HTTP-Proxy-List-1`,
-		`https://list.proxylistplus.com/Fresh-HTTP-Proxy-List-2`,
-		`https://list.proxylistplus.com/Fresh-HTTP-Proxy-List-3`,
 		`https://list.proxylistplus.com/SSL-List-1`,
+		`https://list.proxylistplus.com/SSL-List-2`,
 	}
 }
 
@@ -37,18 +35,19 @@ func (f ProxyListPlus) UseMasterProxy() bool {
 }
 
 //ContentType returns the target url's content type
-func (f ProxyListPlus) ContentType() types.ContentType{
+func (f ProxyListPlus) ContentType() types.ContentType {
 	return types.StaticHTML
 }
+
 //ParseJSON parses JSON payload and extracts proxy information
-func (f ProxyListPlus) ParseJSON(payload []byte) (ps []*types.ProxyServer){
+func (f ProxyListPlus) ParseJSON(payload []byte) (ps []*types.ProxyServer) {
 	return
 }
 
 //ListSelector returns the jQuery selector for searching the proxy server list/table.
 func (f ProxyListPlus) ListSelector() []string {
 	return []string{
-		"#page table.bg tbody tr",
+		"#page table.bg tbody tr.cells",
 	}
 }
 
@@ -59,10 +58,6 @@ func (f ProxyListPlus) RefreshInterval() int {
 
 //ScanItem process each item found in the table determined by ListSelector().
 func (f ProxyListPlus) ScanItem(i, urlIdx int, s *goquery.Selection) (ps *types.ProxyServer) {
-	if i < 2 {
-		//skip headers
-		return
-	}
 	anon := strings.TrimSpace(s.Find("td:nth-child(4)").Text())
 	if strings.EqualFold(anon, "transparent") {
 		return

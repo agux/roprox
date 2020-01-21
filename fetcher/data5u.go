@@ -18,9 +18,7 @@ func (f Data5u) UID() string {
 //Urls return the server urls that provide the free proxy server lists.
 func (f Data5u) Urls() []string {
 	return []string{
-		`http://www.data5u.com/free/index.shtml`,
-		`http://www.data5u.com/free/gngn/index.shtml`,
-		`http://www.data5u.com/free/gwgn/index.shtml`,
+		`http://www.data5u.com`,
 	}
 }
 
@@ -36,18 +34,19 @@ func (f Data5u) UseMasterProxy() bool {
 }
 
 //ContentType returns the target url's content type
-func (f Data5u) ContentType() types.ContentType{
+func (f Data5u) ContentType() types.ContentType {
 	return types.StaticHTML
 }
+
 //ParseJSON parses JSON payload and extracts proxy information
-func (f Data5u) ParseJSON(payload []byte) (ps []*types.ProxyServer){
+func (f Data5u) ParseJSON(payload []byte) (ps []*types.ProxyServer) {
 	return
 }
 
 //ListSelector returns the jQuery selector for searching the proxy server list/table.
 func (f Data5u) ListSelector() []string {
 	return []string{
-		`body div:nth-child(7) ul li:nth-child(2) ul`,
+		`ul.l2`,
 	}
 }
 
@@ -62,8 +61,8 @@ func (f Data5u) ScanItem(i, urlIdx int, s *goquery.Selection) (ps *types.ProxySe
 		//skip header
 		return
 	}
-	anon := strings.TrimSpace(s.Find("span:nth-child(3) li a").Text())
-	if strings.Contains(anon, `透明`) {
+	anon := strings.TrimSpace(s.Find("span:nth-child(3) li").Text())
+	if strings.Contains(anon, `透明`) || len(anon) == 0 {
 		return
 	}
 	host := strings.TrimSpace(s.Find("span:nth-child(1) li").Text())

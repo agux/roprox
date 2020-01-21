@@ -8,7 +8,6 @@ import (
 	"github.com/carusyte/roprox/types"
 )
 
-//FIXME: get 0 proxy
 //CoolProxy fetches proxy server from https://www.cool-proxy.net/
 type CoolProxy struct{}
 

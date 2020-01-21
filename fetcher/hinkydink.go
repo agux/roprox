@@ -20,7 +20,6 @@ func (f HinkyDink) Urls() []string {
 	return []string{
 		`http://www.mrhinkydink.com/proxies.htm`,
 		`http://www.mrhinkydink.com/proxies2.htm`,
-		`http://www.mrhinkydink.com/proxies3.htm`,
 	}
 }
 

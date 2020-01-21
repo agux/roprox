@@ -21,6 +21,8 @@ func (f KuaiDaiLi) Urls() []string {
 		`https://www.kuaidaili.com/ops/proxylist/1/`,
 		`https://www.kuaidaili.com/ops/proxylist/2/`,
 		`https://www.kuaidaili.com/ops/proxylist/3/`,
+		`https://www.kuaidaili.com/ops/proxylist/4/`,
+		`https://www.kuaidaili.com/ops/proxylist/5/`,
 	}
 }
 
