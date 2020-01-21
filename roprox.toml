@@ -1,5 +1,5 @@
-# debug, info, warning, error, fatal, panic
-log_level = "debug"
+# trace, debug, info, warning, error, fatal, panic
+log_level = "trace"
 
 master_proxy_addr = "127.0.0.1:1086"
 http_retry = 3
@@ -18,7 +18,7 @@ eviction_timeout = 1800
 eviction_failure = 3
 
 [Logging]
-log_file_path = "~/roprox.log"
+log_file_path = "roprox.log"
 
 [DataSource]
 user_agents = "https://developers.whatismybrowser.com/api/docs/latest/user-agent-database-dump-url-csv-sample.tar.gz"

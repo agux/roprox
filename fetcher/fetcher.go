@@ -2,10 +2,12 @@ package fetcher
 
 import (
 	"io"
+	"io/ioutil"
 
 	"github.com/PuerkitoBio/goquery"
 
 	//shorten type reference
+
 	t "github.com/carusyte/roprox/types"
 	"github.com/carusyte/roprox/util"
 	"golang.org/x/text/encoding/simplifiedchinese"
@@ -21,13 +23,12 @@ func Fetch(chpx chan<- *t.ProxyServer, fspec t.FetcherSpec) {
 	}
 }
 
-func fetchFor(i int, url string, chpx chan<- *t.ProxyServer, fspec t.FetcherSpec) {
+func fetchStaticHTML(urlIdx int, url string, chpx chan<- *t.ProxyServer, fspec t.FetcherSpec) (c int) {
 	gbk := fspec.IsGBK()
 	useMasterProxy := fspec.UseMasterProxy()
+
 	selectors := fspec.ListSelector()
 	sel := ""
-
-	log.Infof("fetching proxy server from %s", url)
 	res, e := util.HTTPGetResponse(url, nil, useMasterProxy, true)
 	if e != nil {
 		log.Errorf("failed to get free proxy list from %s, giving up %+v", url, e)
@@ -46,21 +47,62 @@ func fetchFor(i int, url string, chpx chan<- *t.ProxyServer, fspec t.FetcherSpec
 		log.Errorf("failed to read response body from %s: %+v", url, e)
 		return
 	}
-	count := 0
+	if h, e := doc.Html(); e == nil {
+		log.Tracef("html returned from %s:\n%s", url, h)
+	} else {
+		log.Errorf("failed to get html content from %s: %+v", url, e)
+		return
+	}
+	c = 0
 	//parse free proxy item
-	if i < len(selectors) {
-		sel = selectors[i]
+	if urlIdx < len(selectors) {
+		sel = selectors[urlIdx]
 	} else {
 		sel = selectors[len(selectors)-1]
 	}
-
 	doc.Find(sel).Each(
 		func(i int, s *goquery.Selection) {
-			ps := fspec.ScanItem(i, s)
+			ps := fspec.ScanItem(i, urlIdx, s)
 			if ps != nil {
 				chpx <- ps
-				count++
+				c++
 			}
 		})
-	log.Infof("%d proxies available from %s", count, url)
+	return
+}
+
+func fetchJSON(urlIdx int, url string, chpx chan<- *t.ProxyServer, fspec t.FetcherSpec) (c int) {
+	useMasterProxy := fspec.UseMasterProxy()
+	res, e := util.HTTPGetResponse(url, nil, useMasterProxy, true)
+	if e != nil {
+		log.Errorf("failed to get free proxy list from %s, giving up %+v", url, e)
+		return
+	}
+	defer res.Body.Close()
+	payload, e := ioutil.ReadAll(res.Body)
+	if e != nil {
+		log.Errorf("failed to read html body from %s, giving up %+v", url, e)
+		return
+	}
+	log.Tracef("json returned from %s:\n%s", url, string(payload))
+	ps := fspec.ParseJSON(payload)
+	for _, p := range ps {
+		chpx <- p
+		c++
+	}
+	return
+}
+
+func fetchFor(urlIdx int, url string, chpx chan<- *t.ProxyServer, fspec t.FetcherSpec) {
+	log.Debugf("fetching proxy server from %s", url)
+	c := 0
+	switch fspec.ContentType() {
+	case t.StaticHTML:
+		c = fetchStaticHTML(urlIdx, url, chpx, fspec)
+	case t.JSON:
+		c = fetchJSON(urlIdx, url, chpx, fspec)
+	default:
+		log.Warnf("unsupported fetcher content type: %+v", fspec.ContentType())
+	}
+	log.Infof("%d proxies available from %s", c, url)
 }

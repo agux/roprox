@@ -7,11 +7,10 @@ import (
 )
 
 func TestFetchGatherProxy(t *testing.T) {
-	t.Fail()
 	chpx := make(chan *types.ProxyServer, 100)
 	go func() {
 		for px := range chpx {
-			log.Error(px)
+			log.Debugf("extracted proxy: %+v", px)
 		}
 	}()
 	gp := &GatherProxy{}

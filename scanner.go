@@ -117,7 +117,7 @@ func saveProxyServer(bucket []*t.ProxyServer) {
 	for ; rt < retry; rt++ {
 		_, err := data.DB.Exec(stmt, valueArgs...)
 		if err != nil {
-			log.Println(err)
+			log.Warn(err)
 			if strings.Contains(err.Error(), "Deadlock") {
 				continue
 			} else {

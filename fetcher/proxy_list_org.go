@@ -37,6 +37,15 @@ func (f ProxyListOrg) UseMasterProxy() bool {
 	return true
 }
 
+//ContentType returns the target url's content type
+func (f ProxyListOrg) ContentType() types.ContentType{
+	return types.StaticHTML
+}
+//ParseJSON parses JSON payload and extracts proxy information
+func (f ProxyListOrg) ParseJSON(payload []byte) (ps []*types.ProxyServer){
+	return
+}
+
 //ListSelector returns the jQuery selector for searching the proxy server list/table.
 func (f ProxyListOrg) ListSelector() []string {
 	return []string{
@@ -50,7 +59,7 @@ func (f ProxyListOrg) RefreshInterval() int {
 }
 
 //ScanItem process each item found in the table determined by ListSelector().
-func (f ProxyListOrg) ScanItem(i int, s *goquery.Selection) (ps *types.ProxyServer) {
+func (f ProxyListOrg) ScanItem(i, urlIdx int, s *goquery.Selection) (ps *types.ProxyServer) {
 	anon := strings.TrimSpace(s.Find("li.type strong").Text())
 	if strings.EqualFold(anon, "transparent") {
 		return

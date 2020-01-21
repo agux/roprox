@@ -37,6 +37,16 @@ func (f Z66IP) UseMasterProxy() bool {
 	return false
 }
 
+//ContentType returns the target url's content type
+func (f Z66IP) ContentType() types.ContentType {
+	return types.StaticHTML
+}
+
+//ParseJSON parses JSON payload and extracts proxy information
+func (f Z66IP) ParseJSON(payload []byte) (ps []*types.ProxyServer) {
+	return
+}
+
 //ListSelector returns the jQuery selector for searching the proxy server list/table.
 func (f Z66IP) ListSelector() []string {
 	return []string{
@@ -50,7 +60,7 @@ func (f Z66IP) RefreshInterval() int {
 }
 
 //ScanItem process each item found in the table determined by ListSelector().
-func (f Z66IP) ScanItem(i int, s *goquery.Selection) (ps *types.ProxyServer) {
+func (f Z66IP) ScanItem(i, urlIdx int, s *goquery.Selection) (ps *types.ProxyServer) {
 	if i == 0 {
 		//skip header
 		return

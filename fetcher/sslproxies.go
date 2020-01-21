@@ -32,6 +32,15 @@ func (f SSLProxies) UseMasterProxy() bool {
 	return true
 }
 
+//ContentType returns the target url's content type
+func (f SSLProxies) ContentType() types.ContentType{
+	return types.StaticHTML
+}
+//ParseJSON parses JSON payload and extracts proxy information
+func (f SSLProxies) ParseJSON(payload []byte) (ps []*types.ProxyServer){
+	return
+}
+
 //ListSelector returns the jQuery selector for searching the proxy server list/table.
 func (f SSLProxies) ListSelector() []string {
 	return []string{
@@ -45,7 +54,7 @@ func (f SSLProxies) RefreshInterval() int {
 }
 
 //ScanItem process each item found in the table determined by ListSelector().
-func (f SSLProxies) ScanItem(i int, s *goquery.Selection) (ps *types.ProxyServer) {
+func (f SSLProxies) ScanItem(i, urlIdx int, s *goquery.Selection) (ps *types.ProxyServer) {
 	lchk := strings.TrimSpace(s.Find("td:nth-child(8)").Text())
 	if strings.HasSuffix(lchk, "minutes ago") {
 		m := lchk[:strings.Index(lchk, " ")]

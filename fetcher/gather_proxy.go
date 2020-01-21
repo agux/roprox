@@ -1,6 +1,8 @@
 package fetcher
 
 import (
+	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/PuerkitoBio/goquery"
@@ -37,10 +39,20 @@ func (f GatherProxy) UseMasterProxy() bool {
 	return true
 }
 
+//ContentType returns the target url's content type
+func (f GatherProxy) ContentType() types.ContentType{
+	return types.StaticHTML
+}
+//ParseJSON parses JSON payload and extracts proxy information
+func (f GatherProxy) ParseJSON(payload []byte) (ps []*types.ProxyServer){
+	return
+}
+
 //ListSelector returns the jQuery selector for searching the proxy server list/table.
 func (f GatherProxy) ListSelector() []string {
 	return []string{
-		"#tblproxy tbody tr",
+		// "#tblproxy tbody tr",
+		"#tblproxy tbody script",
 	}
 }
 
@@ -50,20 +62,22 @@ func (f GatherProxy) RefreshInterval() int {
 }
 
 //ScanItem process each item found in the table determined by ListSelector().
-func (f GatherProxy) ScanItem(i int, s *goquery.Selection) (ps *types.ProxyServer) {
-	log.Debug(s.Find("td:nth-child(2)").Text())
-	log.Debug(s.Attr("prx"))
-	if i < 2 {
-		//skip headers
+func (f GatherProxy) ScanItem(i, urlIdx int, s *goquery.Selection) (ps *types.ProxyServer) {
+	js := strings.TrimSpace(s.Text())
+	log.Tracef("found script: %s", js)
+	rx :=
+		`"PROXY_IP":"([0-9\.]*)",.*` +
+			`"PROXY_PORT":"([0-9ABCDEF]*)",.*`
+	r := regexp.MustCompile(rx).FindStringSubmatch(js)
+	if len(r) < 3 {
+		log.Warnf("unable to parse js for %s: %s", f.UID(), js)
 		return
 	}
-
-	anon := strings.TrimSpace(s.Find("td:nth-child(4)").Text())
-	if strings.EqualFold(anon, "transparent") {
-		return
+	host := strings.TrimSpace(r[1])
+	port, e := strconv.ParseInt(strings.TrimSpace(r[2]), 16, 64)
+	if e != nil {
+		log.Warnf("%s unable to parse proxy port from hex: %s", f.UID(), r[2])
 	}
-	host := strings.TrimSpace(s.Find("td:nth-child(2)").Text())
-	port := strings.TrimSpace(s.Find("td:nth-child(3) a").Text())
-	ps = types.NewProxyServer(f.UID(), host, port, "http")
+	ps = types.NewProxyServer(f.UID(), host, strconv.Itoa(int(port)), "http")
 	return
 }

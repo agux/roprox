@@ -35,6 +35,15 @@ func (f Data5u) UseMasterProxy() bool {
 	return false
 }
 
+//ContentType returns the target url's content type
+func (f Data5u) ContentType() types.ContentType{
+	return types.StaticHTML
+}
+//ParseJSON parses JSON payload and extracts proxy information
+func (f Data5u) ParseJSON(payload []byte) (ps []*types.ProxyServer){
+	return
+}
+
 //ListSelector returns the jQuery selector for searching the proxy server list/table.
 func (f Data5u) ListSelector() []string {
 	return []string{
@@ -48,7 +57,7 @@ func (f Data5u) RefreshInterval() int {
 }
 
 //ScanItem process each item found in the table determined by ListSelector().
-func (f Data5u) ScanItem(i int, s *goquery.Selection) (ps *types.ProxyServer) {
+func (f Data5u) ScanItem(i, urlIdx int, s *goquery.Selection) (ps *types.ProxyServer) {
 	if i == 0 {
 		//skip header
 		return

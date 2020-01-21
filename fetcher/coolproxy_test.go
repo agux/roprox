@@ -7,13 +7,12 @@ import (
 )
 
 func TestFetchCoolProxy(t *testing.T) {
-	t.Fail()
 	chpx := make(chan *types.ProxyServer, 100)
 	go func() {
 		for px := range chpx {
-			log.Error(px)
+			log.Debugf("found proxy: %+v", px)
 		}
 	}()
-	fetchFor(0, `https://www.cool-proxy.net/proxies/http_proxy_list/country_code:/port:/anonymous:1/page:1`,
+	fetchFor(0, `https://cool-proxy.net/proxies.json`,
 		chpx, CoolProxy{})
 }

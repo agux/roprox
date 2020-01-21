@@ -38,6 +38,15 @@ func (f CoderBusy) UseMasterProxy() bool {
 	return false
 }
 
+//ContentType returns the target url's content type
+func (f CoderBusy) ContentType() types.ContentType{
+	return types.StaticHTML
+}
+//ParseJSON parses JSON payload and extracts proxy information
+func (f CoderBusy) ParseJSON(payload []byte) (ps []*types.ProxyServer){
+	return
+}
+
 //ListSelector returns the jQuery selector for searching the proxy server list/table.
 func (f CoderBusy) ListSelector() []string {
 	return []string{
@@ -51,7 +60,7 @@ func (f CoderBusy) RefreshInterval() int {
 }
 
 //ScanItem process each item found in the table determined by ListSelector().
-func (f CoderBusy) ScanItem(i int, s *goquery.Selection) (ps *types.ProxyServer) {
+func (f CoderBusy) ScanItem(i, urlIdx int, s *goquery.Selection) (ps *types.ProxyServer) {
 	host := strings.TrimSpace(s.Find("td:nth-child(1)").Text())
 	port := strings.TrimSpace(s.Find("td.port-box").Text())
 	ps = types.NewProxyServer(f.UID(), host, port, "http")

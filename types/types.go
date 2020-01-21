@@ -11,6 +11,8 @@ import (
 
 var log = logging.Logger
 
+type ContentType string
+
 const (
 	//OK indicates the proxy server is available per the last check result
 	OK = "OK"
@@ -20,6 +22,10 @@ const (
 	UNK = "UNK"
 	//DateTimeFormat the default date time format string in go
 	DateTimeFormat = "2006-01-02 15:04:05"
+
+	StaticHTML  ContentType = "static_html"
+	DynamicHTML ContentType = "dynamic_html"
+	JSON        ContentType = "json"
 )
 
 //ProxyServer is a model mapping for database table proxy_list
@@ -64,6 +70,10 @@ type FetcherSpec interface {
 	Urls() []string
 	//IsGBK returns wheter the web page is GBK encoded.
 	IsGBK() bool
+	//ContentType returns the target url's content type
+	ContentType() ContentType
+	//ParseJSON parses JSON payload and extracts proxy information
+	ParseJSON(payload []byte) (ps []*ProxyServer)
 	//UseMasterProxy returns whether the fetcher needs a master proxy server
 	//to access the free proxy list provider.
 	UseMasterProxy() bool
@@ -72,7 +82,7 @@ type FetcherSpec interface {
 	//RefreshInterval determines how often the list should be refreshed, in minutes.
 	RefreshInterval() int
 	//ScanItem process each item found in the table determined by ListSelector().
-	ScanItem(i int, s *goquery.Selection) (ps *ProxyServer)
+	ScanItem(itemIdx, urlIdx int, s *goquery.Selection) (ps *ProxyServer)
 }
 
 //UserAgent represents user_agent table structure.

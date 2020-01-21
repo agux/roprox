@@ -33,6 +33,15 @@ func (f IP3366) UseMasterProxy() bool {
 	return false
 }
 
+//ContentType returns the target url's content type
+func (f IP3366) ContentType() types.ContentType{
+	return types.StaticHTML
+}
+//ParseJSON parses JSON payload and extracts proxy information
+func (f IP3366) ParseJSON(payload []byte) (ps []*types.ProxyServer){
+	return
+}
+
 //ListSelector returns the jQuery selector for searching the proxy server list/table.
 func (f IP3366) ListSelector() []string {
 	return []string{
@@ -46,7 +55,7 @@ func (f IP3366) RefreshInterval() int {
 }
 
 //ScanItem process each item found in the table determined by ListSelector().
-func (f IP3366) ScanItem(i int, s *goquery.Selection) (ps *types.ProxyServer) {
+func (f IP3366) ScanItem(i, urlIdx int, s *goquery.Selection) (ps *types.ProxyServer) {
 	anon := strings.TrimSpace(s.Find("td:nth-child(3)").Text())
 	if strings.Contains(anon, `透明`) {
 		return

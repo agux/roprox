@@ -14,15 +14,17 @@ var Logger = logrus.New()
 
 const (
 	//DateFormat is project-standard date format.
-	DateFormat     = "2006-01-02"
+	DateFormat = "2006-01-02"
 	//TimeFormat is project-standard time format.
-	TimeFormat     = "15:04:05"
+	TimeFormat = "15:04:05"
 	//DateTimeFormat is project-standard datetime format.
 	DateTimeFormat = "2006-01-02 15:04:05"
 )
 
 func init() {
 	switch conf.Args.LogLevel {
+	case "trace":
+		Logger.SetLevel(logrus.TraceLevel)
 	case "debug":
 		Logger.SetLevel(logrus.DebugLevel)
 	case "info":

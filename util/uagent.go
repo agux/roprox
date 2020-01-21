@@ -139,7 +139,7 @@ func mergeAgents(agents []*types.UserAgent) (e error) {
 	for ; rt < retry; rt++ {
 		_, e = data.DB.Exec(stmt, valueArgs...)
 		if e != nil {
-			fmt.Println(e)
+			log.Warn(e)
 			if strings.Contains(e.Error(), "Deadlock") {
 				continue
 			} else {

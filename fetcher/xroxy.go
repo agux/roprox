@@ -40,6 +40,15 @@ func (f Xroxy) UseMasterProxy() bool {
 	return true
 }
 
+//ContentType returns the target url's content type
+func (f Xroxy) ContentType() types.ContentType{
+	return types.StaticHTML
+}
+//ParseJSON parses JSON payload and extracts proxy information
+func (f Xroxy) ParseJSON(payload []byte) (ps []*types.ProxyServer){
+	return
+}
+
 //ListSelector returns the jQuery selector for searching the proxy server list/table.
 func (f Xroxy) ListSelector() []string {
 	return []string{
@@ -53,7 +62,7 @@ func (f Xroxy) RefreshInterval() int {
 }
 
 //ScanItem process each item found in the table determined by ListSelector().
-func (f Xroxy) ScanItem(i int, s *goquery.Selection) (ps *types.ProxyServer) {
+func (f Xroxy) ScanItem(i, urlIdx int, s *goquery.Selection) (ps *types.ProxyServer) {
 	if s.Find("td").Length() < 5 {
 		//skip promotion row
 		return

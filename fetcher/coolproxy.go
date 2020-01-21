@@ -1,13 +1,11 @@
 package fetcher
 
 import (
-	"encoding/base64"
-	"regexp"
-	"strings"
+	"encoding/json"
+	"strconv"
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/carusyte/roprox/types"
-	"github.com/carusyte/roprox/util"
 )
 
 //FIXME: get 0 proxy
@@ -22,9 +20,7 @@ func (f CoolProxy) UID() string {
 //Urls return the server urls that provide the free proxy server lists.
 func (f CoolProxy) Urls() []string {
 	return []string{
-		`https://www.cool-proxy.net/proxies/http_proxy_list/country_code:/port:/anonymous:1/page:1`,
-		`https://www.cool-proxy.net/proxies/http_proxy_list/country_code:/port:/anonymous:1/page:2`,
-		`https://www.cool-proxy.net/proxies/http_proxy_list/country_code:/port:/anonymous:1/page:3`,
+		`https://cool-proxy.net/proxies.json`,
 	}
 }
 
@@ -39,11 +35,66 @@ func (f CoolProxy) UseMasterProxy() bool {
 	return true
 }
 
+//ContentType returns the target url's content type
+func (f CoolProxy) ContentType() types.ContentType {
+	return types.JSON
+}
+
+//ParseJSON parses JSON payload and extracts proxy information
+func (f CoolProxy) ParseJSON(payload []byte) (ps []*types.ProxyServer) {
+	var list []interface{}
+	if e := json.Unmarshal(payload, &list); e != nil {
+		log.Warnf("%s failed to parse json payload, %+v:\n%s", f.UID(), e, string(payload))
+		return
+	}
+	for i, li := range list {
+		var m map[string]interface{}
+		var ok bool
+		var v interface{}
+		var fval float64
+		var strVal string
+		if m, ok = li.(map[string]interface{}); !ok {
+			log.Warnf("%s unable to parse json element at %d: %+v", f.UID(), i, li)
+			return
+		}
+		if v, ok = m["anonymous"]; !ok {
+			log.Warnf("%s unable to parse anonymous info at %d: %+v", f.UID(), i, li)
+			continue
+		}
+		if fval, ok = v.(float64); !ok {
+			log.Warnf("%s unable to parse anonymous info at %d: %+v", f.UID(), i, li)
+			continue
+		}
+		if fval != 1 {
+			//bypassing non-anonymous proxy
+			continue
+		}
+		if v, ok = m["ip"]; !ok {
+			log.Warnf("%s unable to parse ip at %d: %+v", f.UID(), i, li)
+			continue
+		}
+		if strVal, ok = v.(string); !ok {
+			log.Warnf("%s unable to parse ip at %d: %+v", f.UID(), i, li)
+			continue
+		}
+		host := strVal
+		if v, ok = m["port"]; !ok {
+			log.Warnf("%s unable to parse port at %d: %+v", f.UID(), i, li)
+			continue
+		}
+		if fval, ok = v.(float64); !ok {
+			log.Warnf("%s unable to parse port at %d: %+v", f.UID(), i, li)
+			continue
+		}
+		port := strconv.Itoa(int(fval))
+		ps = append(ps, types.NewProxyServer(f.UID(), host, port, "http"))
+	}
+	return
+}
+
 //ListSelector returns the jQuery selector for searching the proxy server list/table.
 func (f CoolProxy) ListSelector() []string {
-	return []string{
-		"#main table tbody tr",
-	}
+	return nil
 }
 
 //RefreshInterval determines how often the list should be refreshed, in minutes.
@@ -52,32 +103,6 @@ func (f CoolProxy) RefreshInterval() int {
 }
 
 //ScanItem process each item found in the table determined by ListSelector().
-func (f CoolProxy) ScanItem(i int, s *goquery.Selection) (ps *types.ProxyServer) {
-	if i < 1 {
-		//skip header
-		return
-	}
-	if s.Find("td").Length() < 5 {
-		//skip promotion row
-		return
-	}
-	//remove script node
-	script := strings.TrimSpace(s.Find("td:nth-child(1) script").Text())
-	r := regexp.MustCompile(`str_rot13\("(.*)"\)`).FindStringSubmatch(script)
-	host := ""
-	if len(r) > 0 {
-		hash := util.Rot13(r[len(r)-1])
-		hostBytes, err := base64.StdEncoding.DecodeString(hash)
-		if err != nil {
-			log.Errorf("%s unable to decode base64 host string: %s", f.UID(), hash)
-			return
-		}
-		host = string(hostBytes)
-	} else {
-		log.Errorf(`%s unable to parse script: %s`, f.UID(), script)
-		return
-	}
-	port := strings.TrimSpace(s.Find("td:nth-child(2)").Text())
-	ps = types.NewProxyServer(f.UID(), host, port, "http")
+func (f CoolProxy) ScanItem(i, urlIdx int, s *goquery.Selection) (ps *types.ProxyServer) {
 	return
 }

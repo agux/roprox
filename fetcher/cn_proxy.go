@@ -19,13 +19,22 @@ func (f CNProxy) UID() string {
 func (f CNProxy) Urls() []string {
 	return []string{
 		`http://cn-proxy.com/`,
-		`http://cn-proxy.com/archives/218`,  //FIXME: get 0 proxy
+		`http://cn-proxy.com/archives/218`,
 	}
 }
 
 //IsGBK returns wheter the web page is GBK encoded.
 func (f CNProxy) IsGBK() bool {
 	return false
+}
+
+//ContentType returns the target url's content type
+func (f CNProxy) ContentType() types.ContentType{
+	return types.StaticHTML
+}
+//ParseJSON parses JSON payload and extracts proxy information
+func (f CNProxy) ParseJSON(payload []byte) (ps []*types.ProxyServer){
+	return
 }
 
 //UseMasterProxy returns whether the fetcher needs a master proxy server
@@ -38,7 +47,7 @@ func (f CNProxy) UseMasterProxy() bool {
 func (f CNProxy) ListSelector() []string {
 	return []string{
 		`#post-4 div div:nth-child(17) table tbody tr`,
-		`#tablekit-table-1,#tablekit-table-52 tbody tr`,
+		`#post-218 div.col-mid div.entry-content table:nth-child(8) tbody tr`,
 	}
 }
 
@@ -48,7 +57,7 @@ func (f CNProxy) RefreshInterval() int {
 }
 
 //ScanItem process each item found in the table determined by ListSelector().
-func (f CNProxy) ScanItem(i int, s *goquery.Selection) (ps *types.ProxyServer) {
+func (f CNProxy) ScanItem(i, urlIdx int, s *goquery.Selection) (ps *types.ProxyServer) {
 	anon := strings.TrimSpace(s.Find("td:nth-child(3)").Text())
 	if strings.Contains(anon, "透明") {
 		return
