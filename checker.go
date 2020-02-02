@@ -87,11 +87,13 @@ func probe(chjobs <-chan *types.ProxyServer) {
 				var e error
 				if util.ValidateProxy(ps.Type, ps.Host, ps.Port) {
 					_, e = data.DB.Exec(`update proxy_list set status = ?, `+
-						`fail = 0, last_check = ? where host = ? and port = ?`,
+						`suc = suc+1, fail = 0, score = suc/(suc+fail)*100, `+
+						`last_check = ? where host = ? and port = ?`,
 						types.OK, util.Now(), ps.Host, ps.Port)
 				} else {
 					_, e = data.DB.Exec(`update proxy_list set status = ?, `+
-						`fail = fail + 1, last_check = ? where host = ? and port = ?`,
+						`fail = fail + 1, score = suc/(suc+fail)*100, `+
+						`last_check = ? where host = ? and port = ?`,
 						types.FAIL, util.Now(), ps.Host, ps.Port)
 				}
 				if e != nil {
