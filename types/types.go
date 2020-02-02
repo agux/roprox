@@ -35,7 +35,9 @@ type ProxyServer struct {
 	Port        string
 	Type        string
 	Status      string
+	Suc         int
 	Fail        int
+	Score       float64
 	LastCheck   string `db:"last_check"`
 	LastScanned string `db:"last_scanned"`
 }
