@@ -14,8 +14,8 @@ probe_timeout = 10
 eviction_interval = 600
 #evict failed state proxy added 30 minutes earlier
 eviction_timeout = 1800
-#evict failed state proxy with count >= 3
-eviction_failure = 3
+#evict proxy with score lower than the specified value
+eviction_score_threshold = 50.0
 
 [Logging]
 log_file_path = "roprox.log"
