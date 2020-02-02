@@ -1,7 +1,7 @@
 # trace, debug, info, warning, error, fatal, panic
 log_level = "trace"
 
-master_proxy_addr = "127.0.0.1:1086"
+master_proxy_addr = "127.0.0.1:1080"
 http_retry = 3
 
 scanner_pool_size = 10

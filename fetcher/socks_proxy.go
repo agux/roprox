@@ -17,6 +17,7 @@ func (f SocksProxy) UID() string {
 
 //Urls return the server urls that provide the free proxy server lists.
 func (f SocksProxy) Urls() []string {
+	//FIXME most of the time only socks4 proxy is shown
 	return []string{
 		`https://www.socks-proxy.net/`,
 	}

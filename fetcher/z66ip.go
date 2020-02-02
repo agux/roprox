@@ -17,6 +17,7 @@ func (f Z66IP) UID() string {
 
 //Urls return the server urls that provide the free proxy server lists.
 func (f Z66IP) Urls() []string {
+	//FIXME seems no available proxy most of the time
 	return []string{
 		`http://www.66ip.cn/1.html`,
 		`http://www.66ip.cn/2.html`,

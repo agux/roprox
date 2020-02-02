@@ -5,6 +5,7 @@ import (
 
 	"github.com/carusyte/roprox/logging"
 	"github.com/sirupsen/logrus"
+	"github.com/spf13/viper"
 )
 
 var log = logging.Logger
@@ -21,6 +22,7 @@ func main() {
 	}()
 
 	log.Info("roprox starting...")
+	log.Infof("config file used: %s", viper.ConfigFileUsed())
 
 	var wg sync.WaitGroup
 	wg.Add(2)
