@@ -20,10 +20,10 @@ func check(wg *sync.WaitGroup) {
 
 func evictBrokenServers() {
 	log.Debug("evicting broken servers...")
-	delete := `delete from proxy_list where status = ? and (last_scanned <= ? or fail >= ?)`
+	delete := `delete from proxy_list where status = ? and last_scanned <= ? and score <= ?`
 	r, e := data.DB.Exec(delete, types.FAIL, time.Now().Add(
 		-time.Duration(conf.Args.EvictionTimeout)*time.Second).Format(util.DateTimeFormat),
-		conf.Args.EvictionFailure)
+		conf.Args.EvictionScoreThreshold)
 	if e != nil {
 		log.Errorln("failed to evict broken proxy servers", e)
 		return

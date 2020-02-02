@@ -2,8 +2,8 @@ package conf
 
 import (
 	"go/build"
-	"os"
 	"log"
+	"os"
 	"path/filepath"
 
 	"github.com/spf13/viper"
@@ -14,17 +14,17 @@ var Args Arguments
 
 //Arguments arguments struct type
 type Arguments struct {
-	LogLevel         string `mapstructure:"log_level"`
-	MasterProxyAddr  string `mapstructure:"master_proxy_addr"`
-	HTTPRetry        int    `mapstructure:"http_retry"`
-	ScannerPoolSize  int    `mapstructure:"scanner_pool_size"`
-	ScannerMaxRetry  int    `mapstructure:"scanner_max_retry"`
-	ProbeSize        int    `mapstructure:"probe_size"`
-	ProbeInterval    int    `mapstructure:"probe_interval"`
-	ProbeTimeout     int    `mapstructure:"probe_timeout"`
-	EvictionTimeout  int    `mapstructure:"eviction_timeout"`
-	EvictionInterval int    `mapstructure:"eviction_interval"`
-	EvictionFailure  int    `mapstructure:"eviction_failure"`
+	LogLevel               string  `mapstructure:"log_level"`
+	MasterProxyAddr        string  `mapstructure:"master_proxy_addr"`
+	HTTPRetry              int     `mapstructure:"http_retry"`
+	ScannerPoolSize        int     `mapstructure:"scanner_pool_size"`
+	ScannerMaxRetry        int     `mapstructure:"scanner_max_retry"`
+	ProbeSize              int     `mapstructure:"probe_size"`
+	ProbeInterval          int     `mapstructure:"probe_interval"`
+	ProbeTimeout           int     `mapstructure:"probe_timeout"`
+	EvictionTimeout        int     `mapstructure:"eviction_timeout"`
+	EvictionInterval       int     `mapstructure:"eviction_interval"`
+	EvictionScoreThreshold float32 `mapstructure:"eviction_score_threshold"`
 
 	Logging struct {
 		LogFilePath string `mapstructure:"log_file_path"`
