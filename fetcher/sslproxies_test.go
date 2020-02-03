@@ -3,8 +3,8 @@ package fetcher
 import (
 	"testing"
 
+	"github.com/carusyte/roprox/conf"
 	"github.com/carusyte/roprox/types"
-	"github.com/spf13/viper"
 )
 
 func TestFetch_SSLProxies(t *testing.T) {
@@ -19,5 +19,5 @@ func TestFetch_SSLProxies(t *testing.T) {
 		fetchFor(i, url, chpx, gp)
 	}
 
-	log.Infof("config file used: %s", viper.ConfigFileUsed())
+	log.Infof("config file used: %s", conf.ConfigFileUsed())
 }

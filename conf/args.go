@@ -12,6 +12,8 @@ import (
 // Args Global Application Arguments
 var Args Arguments
 
+var vp *viper.Viper
+
 //Arguments arguments struct type
 type Arguments struct {
 	LogLevel               string  `mapstructure:"log_level"`
@@ -46,26 +48,27 @@ type Arguments struct {
 }
 
 func init() {
+	vp = viper.New()
 	setDefaults()
-	viper.SetConfigName("roprox") // name of config file (without extension)
+	vp.SetConfigName("roprox") // name of config file (without extension)
 	gopath := os.Getenv("GOPATH")
 	if "" == gopath {
 		gopath = build.Default.GOPATH
 	}
-	viper.AddConfigPath(filepath.Join(gopath, "bin"))
-	viper.AddConfigPath(".") // optionally look for config in the working directory
-	// viper.AddConfigPath("$HOME")
-	err := viper.ReadInConfig()
+	vp.AddConfigPath(filepath.Join(gopath, "bin"))
+	vp.AddConfigPath(".") // optionally look for config in the working directory
+	// vp.AddConfigPath("$HOME")
+	err := vp.ReadInConfig()
 	if err != nil {
 		log.Panicf("config file error: %+v", err)
 	}
-	err = viper.Unmarshal(&Args)
+	err = vp.Unmarshal(&Args)
 	if err != nil {
 		log.Panicf("config file error: %+v", err)
 	}
 	// log.Printf("Configuration: %+v", Args)
-	//viper.WatchConfig()
-	//viper.OnConfigChange(func(e fsnotify.Event) {
+	//vp.WatchConfig()
+	//vp.OnConfigChange(func(e fsnotify.Event) {
 	//	fmt.Println("Config file changed:", e.Name)
 	//})
 	checkConfig()
@@ -77,4 +80,9 @@ func checkConfig() {
 
 func setDefaults() {
 	Args.LogLevel = "info"
+}
+
+// ConfigFileUsed returns the file used to populate the config registry.
+func ConfigFileUsed() string {
+	return vp.ConfigFileUsed()
 }
