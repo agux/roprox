@@ -44,7 +44,6 @@ type Arguments struct {
 		UserName string `mapstructure:"user_name"`
 		Password string `mapstructure:"password"`
 	}
-	//TODO logrus log to file
 }
 
 func init() {
