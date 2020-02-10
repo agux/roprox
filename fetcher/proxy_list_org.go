@@ -37,15 +37,6 @@ func (f ProxyListOrg) UseMasterProxy() bool {
 	return true
 }
 
-//ContentType returns the target url's content type
-func (f ProxyListOrg) ContentType() types.ContentType{
-	return types.StaticHTML
-}
-//ParseJSON parses JSON payload and extracts proxy information
-func (f ProxyListOrg) ParseJSON(payload []byte) (ps []*types.ProxyServer){
-	return
-}
-
 //ListSelector returns the jQuery selector for searching the proxy server list/table.
 func (f ProxyListOrg) ListSelector() []string {
 	return []string{

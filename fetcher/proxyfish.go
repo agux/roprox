@@ -6,7 +6,6 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/PuerkitoBio/goquery"
 	"github.com/carusyte/roprox/types"
 )
 
@@ -24,16 +23,6 @@ func (p ProxyFish) Urls() []string {
 	return []string{
 		`https://www.proxyfish.com/proxylist/server_processing.php`,
 	}
-}
-
-//IsGBK returns wheter the web page is GBK encoded.
-func (p ProxyFish) IsGBK() bool {
-	return false
-}
-
-//ContentType returns the target url's content type
-func (p ProxyFish) ContentType() types.ContentType {
-	return types.JSON
 }
 
 //ParseJSON parses JSON payload and extracts proxy information
@@ -94,19 +83,9 @@ func (p ProxyFish) UseMasterProxy() bool {
 	return true
 }
 
-//ListSelector returns the jQuery selectors for searching the proxy server list/table.
-func (p ProxyFish) ListSelector() []string {
-	panic("not implemented")
-}
-
 //RefreshInterval determines how often the list should be refreshed, in minutes.
 func (p ProxyFish) RefreshInterval() int {
 	return 10
-}
-
-//ScanItem process each item found in the table determined by ListSelector().
-func (p ProxyFish) ScanItem(itemIdx int, urlIdx int, s *goquery.Selection) (ps *types.ProxyServer) {
-	panic("not implemented")
 }
 
 type proxyFishJSON struct {

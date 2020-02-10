@@ -28,15 +28,6 @@ func (f CNProxy) IsGBK() bool {
 	return false
 }
 
-//ContentType returns the target url's content type
-func (f CNProxy) ContentType() types.ContentType{
-	return types.StaticHTML
-}
-//ParseJSON parses JSON payload and extracts proxy information
-func (f CNProxy) ParseJSON(payload []byte) (ps []*types.ProxyServer){
-	return
-}
-
 //UseMasterProxy returns whether the fetcher needs a master proxy server
 //to access the free proxy list provider.
 func (f CNProxy) UseMasterProxy() bool {

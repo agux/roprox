@@ -3,11 +3,13 @@ package fetcher
 import (
 	"io"
 	"io/ioutil"
+	"reflect"
 
 	"github.com/PuerkitoBio/goquery"
 
 	//shorten type reference
 
+	"github.com/carusyte/roprox/types"
 	t "github.com/carusyte/roprox/types"
 	"github.com/carusyte/roprox/util"
 	"golang.org/x/text/encoding/simplifiedchinese"
@@ -24,10 +26,11 @@ func Fetch(chpx chan<- *t.ProxyServer, fspec t.FetcherSpec) {
 }
 
 func fetchStaticHTML(urlIdx int, url string, chpx chan<- *t.ProxyServer, fspec t.FetcherSpec) (c int) {
-	gbk := fspec.IsGBK()
+	htmlFetcher := fspec.(types.StaticHTMLFetcher)
+	gbk := htmlFetcher.IsGBK()
 	useMasterProxy := fspec.UseMasterProxy()
 
-	selectors := fspec.ListSelector()
+	selectors := htmlFetcher.ListSelector()
 	sel := ""
 	res, e := util.HTTPGetResponse(url, nil, useMasterProxy, true)
 	if e != nil {
@@ -62,7 +65,7 @@ func fetchStaticHTML(urlIdx int, url string, chpx chan<- *t.ProxyServer, fspec t
 	}
 	doc.Find(sel).Each(
 		func(i int, s *goquery.Selection) {
-			ps := fspec.ScanItem(i, urlIdx, s)
+			ps := htmlFetcher.ScanItem(i, urlIdx, s)
 			if ps != nil {
 				chpx <- ps
 				c++
@@ -85,7 +88,7 @@ func fetchJSON(urlIdx int, url string, chpx chan<- *t.ProxyServer, fspec t.Fetch
 		return
 	}
 	log.Tracef("json returned from %s:\n%s", url, string(payload))
-	ps := fspec.ParseJSON(payload)
+	ps := fspec.(types.JSONFetcher).ParseJSON(payload)
 	for _, p := range ps {
 		chpx <- p
 		c++
@@ -96,13 +99,13 @@ func fetchJSON(urlIdx int, url string, chpx chan<- *t.ProxyServer, fspec t.Fetch
 func fetchFor(urlIdx int, url string, chpx chan<- *t.ProxyServer, fspec t.FetcherSpec) {
 	log.Debugf("fetching proxy server from %s", url)
 	c := 0
-	switch fspec.ContentType() {
-	case t.StaticHTML:
+	switch fspec.(type) {
+	case types.StaticHTMLFetcher:
 		c = fetchStaticHTML(urlIdx, url, chpx, fspec)
-	case t.JSON:
+	case types.JSONFetcher:
 		c = fetchJSON(urlIdx, url, chpx, fspec)
 	default:
-		log.Warnf("unsupported fetcher content type: %+v", fspec.ContentType())
+		log.Warnf("unsupported fetcher type: %+v", reflect.TypeOf(fspec))
 	}
 	log.Infof("%d proxies available from %s", c, url)
 }

@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"strconv"
 
-	"github.com/PuerkitoBio/goquery"
 	"github.com/carusyte/roprox/types"
 )
 
@@ -23,20 +22,10 @@ func (f CoolProxy) Urls() []string {
 	}
 }
 
-//IsGBK returns wheter the web page is GBK encoded.
-func (f CoolProxy) IsGBK() bool {
-	return false
-}
-
 //UseMasterProxy returns whether the fetcher needs a master proxy server
 //to access the free proxy list provider.
 func (f CoolProxy) UseMasterProxy() bool {
 	return true
-}
-
-//ContentType returns the target url's content type
-func (f CoolProxy) ContentType() types.ContentType {
-	return types.JSON
 }
 
 //ParseJSON parses JSON payload and extracts proxy information
@@ -91,17 +80,7 @@ func (f CoolProxy) ParseJSON(payload []byte) (ps []*types.ProxyServer) {
 	return
 }
 
-//ListSelector returns the jQuery selector for searching the proxy server list/table.
-func (f CoolProxy) ListSelector() []string {
-	return nil
-}
-
 //RefreshInterval determines how often the list should be refreshed, in minutes.
 func (f CoolProxy) RefreshInterval() int {
 	return 10
-}
-
-//ScanItem process each item found in the table determined by ListSelector().
-func (f CoolProxy) ScanItem(i, urlIdx int, s *goquery.Selection) (ps *types.ProxyServer) {
-	return
 }

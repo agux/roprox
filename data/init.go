@@ -38,7 +38,7 @@ func init() {
 	mysql.SetConnMaxLifetime(time.Second * 15)
 
 	// construct a gorp DbMap
-	DB = &gorp.DbMap{Db: mysql, Dialect: gorp.MySQLDialect{"InnoDB", "utf8"}}
+	DB = &gorp.DbMap{Db: mysql, Dialect: gorp.MySQLDialect{Engine: "InnoDB", Encoding: "utf8"}}
 
 	err = mysql.Ping()
 	if err != nil {

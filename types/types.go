@@ -70,19 +70,25 @@ type FetcherSpec interface {
 	UID() string
 	//Urls return the server urls that provide the free proxy server lists.
 	Urls() []string
-	//IsGBK returns wheter the web page is GBK encoded.
-	IsGBK() bool
-	//ContentType returns the target url's content type
-	ContentType() ContentType
-	//ParseJSON parses JSON payload and extracts proxy information
-	ParseJSON(payload []byte) (ps []*ProxyServer)
 	//UseMasterProxy returns whether the fetcher needs a master proxy server
 	//to access the free proxy list provider.
 	UseMasterProxy() bool
-	//ListSelector returns the jQuery selectors for searching the proxy server list/table.
-	ListSelector() []string
 	//RefreshInterval determines how often the list should be refreshed, in minutes.
 	RefreshInterval() int
+}
+
+//JSONFetcher parses target url as JSON payload
+type JSONFetcher interface {
+	//ParseJSON parses JSON payload and extracts proxy information
+	ParseJSON(payload []byte) (ps []*ProxyServer)
+}
+
+//StaticHTMLFetcher fetches target url by parsing static HTML content
+type StaticHTMLFetcher interface {
+	//IsGBK returns wheter the web page is GBK encoded.
+	IsGBK() bool
+	//ListSelector returns the jQuery selectors for searching the proxy server list/table.
+	ListSelector() []string
 	//ScanItem process each item found in the table determined by ListSelector().
 	ScanItem(itemIdx, urlIdx int, s *goquery.Selection) (ps *ProxyServer)
 }

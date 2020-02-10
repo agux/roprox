@@ -44,15 +44,6 @@ func (f FreeProxyCZ) UseMasterProxy() bool {
 	return true
 }
 
-//ContentType returns the target url's content type
-func (f FreeProxyCZ) ContentType() types.ContentType{
-	return types.StaticHTML
-}
-//ParseJSON parses JSON payload and extracts proxy information
-func (f FreeProxyCZ) ParseJSON(payload []byte) (ps []*types.ProxyServer){
-	return
-}
-
 //ListSelector returns the jQuery selector for searching the proxy server list/table.
 func (f FreeProxyCZ) ListSelector() []string {
 	return []string{
