@@ -7,6 +7,7 @@ import (
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/carusyte/roprox/logging"
+	"github.com/chromedp/chromedp"
 )
 
 var log = logging.Logger
@@ -22,10 +23,6 @@ const (
 	UNK = "UNK"
 	//DateTimeFormat the default date time format string in go
 	DateTimeFormat = "2006-01-02 15:04:05"
-
-	StaticHTML  ContentType = "static_html"
-	DynamicHTML ContentType = "dynamic_html"
-	JSON        ContentType = "json"
 )
 
 //ProxyServer is a model mapping for database table proxy_list
@@ -34,6 +31,7 @@ type ProxyServer struct {
 	Host        string
 	Port        string
 	Type        string
+	Loc         string
 	Status      string
 	Suc         int
 	Fail        int
@@ -91,6 +89,14 @@ type StaticHTMLFetcher interface {
 	ListSelector() []string
 	//ScanItem process each item found in the table determined by ListSelector().
 	ScanItem(itemIdx, urlIdx int, s *goquery.Selection) (ps *ProxyServer)
+}
+
+//DynamicHTMLFetcher fetches target url by using web driver
+type DynamicHTMLFetcher interface {
+	//Actions return the webdriver actions after the specified url is visited
+	Actions(urlIdx int, url string) (tasks chromedp.Tasks, values interface{})
+	//OnComplete parses the selected values into proxy server instances
+	OnComplete(values interface{}) (ps []*ProxyServer)
 }
 
 //UserAgent represents user_agent table structure.

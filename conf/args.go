@@ -19,6 +19,7 @@ type Arguments struct {
 	LogLevel               string  `mapstructure:"log_level"`
 	MasterProxyAddr        string  `mapstructure:"master_proxy_addr"`
 	HTTPRetry              int     `mapstructure:"http_retry"`
+	HTTPTimeOut            int     `mapstructure:"http_timeout"`
 	ScannerPoolSize        int     `mapstructure:"scanner_pool_size"`
 	ScannerMaxRetry        int     `mapstructure:"scanner_max_retry"`
 	ProbeSize              int     `mapstructure:"probe_size"`

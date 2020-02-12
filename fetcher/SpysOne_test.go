@@ -2,9 +2,8 @@ package fetcher
 
 import (
 	"context"
-	"fmt"
-	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/carusyte/roprox/conf"
 	"github.com/carusyte/roprox/types"
@@ -12,6 +11,7 @@ import (
 )
 
 func TestFetch_SpysOne(t *testing.T) {
+	//FIXME unable to fetch 500 records by selecting the record number
 	log.Infof("config file used: %s", conf.ConfigFileUsed())
 	chpx := make(chan *types.ProxyServer, 100)
 	go func() {
@@ -26,33 +26,43 @@ func TestFetch_SpysOne(t *testing.T) {
 }
 
 func TestDynamicSpysOne(t *testing.T) {
-	//TODO try this
-	ctx, cancel := chromedp.NewContext(context.Background())
+	// create context
+	o := append(chromedp.DefaultExecAllocatorOptions[:],
+		//... any options here
+		chromedp.ProxyServer("socks5://localhost:1080"),
+	)
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(conf.Args.HTTPTimeOut) * time.Second)
 	defer cancel()
 
-	ts := httptest.NewServer(writeHTML(`
-<body>
-<p id="content" onclick="changeText()">Original content.</p>
-<script>
-function changeText() {
-	document.getElementById("content").textContent = "New content!"
-}
-</script>
-</body>
-	`))
-	defer ts.Close()
+	ctx, cancel = chromedp.NewExecAllocator(ctx, o...)
+	defer cancel()
 
-	var outerBefore, outerAfter string
-	if err := chromedp.Run(ctx,
-		chromedp.Navigate(ts.URL),
-		chromedp.OuterHTML("#content", &outerBefore),
-		chromedp.Click("#content", chromedp.ByID),
-		chromedp.OuterHTML("#content", &outerAfter),
-	); err != nil {
-		panic(err)
+	ctx, cancel = chromedp.NewContext(ctx)
+	defer cancel()
+
+	// run task list
+	// var res string
+	// var nodes []*cdp.Node
+	var texts []string
+	err := chromedp.Run(ctx,
+		chromedp.Navigate(`http://spys.one/en/anonymous-proxy-list/`),
+		chromedp.WaitReady(`body table:nth-child(3) tbody tr:nth-child(5) td table tbody tr td:nth-child(1) font font.spy2`),
+		// chromedp.Nodes(`body table:nth-child(3) tbody tr:nth-child(5) td table tbody tr td:nth-child(1) font.spy14`,
+		// 	&nodes),
+		chromedp.EvaluateAsDevTools(jsGetText(`body table:nth-child(3) tbody tr:nth-child(5) td table tbody tr td:nth-child(1) font.spy14`),
+			&texts),
+		// chromedp.Text(``, &res),
+	)
+	if err != nil {
+		log.Fatal(err)
 	}
-	fmt.Println("OuterHTML before clicking:")
-	fmt.Println(outerBefore)
-	fmt.Println("OuterHTML after clicking:")
-	fmt.Println(outerAfter)
+
+	log.Debug(texts)
+
+	// for i, n := range nodes {
+	// 	log.Debugf("#%d value: %+v, text: %+v", i, n.Value, n.AttributeValue("Text"))
+	// }
+
+	// log.Println(strings.TrimSpace(res))
 }
