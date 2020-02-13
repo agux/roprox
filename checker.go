@@ -65,10 +65,10 @@ func queryStaleServers(chjobs chan<- *types.ProxyServer) {
 				FROM
 					proxy_list
 				WHERE
-					last_check <= ?
+					status = ?
+					or last_check <= ?
 					order by last_check`
-	//TODO do we need to filter out failed servers to lower the workload?
-	_, e := data.DB.Select(&list, query, time.Now().Add(
+	_, e := data.DB.Select(&list, query, types.UNK, time.Now().Add(
 		-time.Duration(conf.Args.ProbeInterval)*time.Second).Format(util.DateTimeFormat))
 	if e != nil {
 		log.Errorln("failed to query stale proxy servers", e)
