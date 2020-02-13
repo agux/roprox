@@ -1,8 +1,14 @@
 package fetcher
 
 import (
+	"context"
 	"fmt"
 	"strings"
+	"time"
+
+	"github.com/chromedp/chromedp"
+	"github.com/chromedp/chromedp/kb"
+	"github.com/pkg/errors"
 )
 
 func jsGetText(sel string) (js string) {
@@ -79,4 +85,31 @@ func jsSelect(sel, val string) (js string) {
 	js = strings.Join([]string{funcJS, invokeFuncJS}, " ")
 	log.Tracef("javascript: %s", js)
 	return js
+}
+
+func scrollToBottom(ctx context.Context) (e error) {
+	var bottom bool
+	for i := 1; true; i++ {
+		if e = chromedp.Run(ctx,
+			chromedp.KeyEvent(kb.End),
+		); e != nil {
+			return errors.Wrapf(e, "failed to send kb.End key #%d", i)
+		}
+
+		log.Debugf("End key sent #%d", i)
+
+		if e = chromedp.Run(ctx,
+			chromedp.Evaluate(jsPageBottom(), &bottom),
+		); e != nil {
+			return errors.Wrapf(e, "failed to check page bottom #%d", i)
+		}
+
+		if bottom {
+			//found footer
+			break
+		}
+
+		time.Sleep(time.Millisecond * 500)
+	}
+	return
 }

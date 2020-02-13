@@ -5,11 +5,9 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/carusyte/roprox/types"
 	"github.com/chromedp/chromedp"
-	"github.com/chromedp/chromedp/kb"
 	"github.com/pkg/errors"
 )
 
@@ -78,7 +76,7 @@ func (f SpysOne) Fetch(ctx context.Context, urlIdx int, url string) (ps []*types
 		return ps, errors.Wrapf(e, "failed to wait page refresh")
 	}
 
-	if e = f.pageEnd(ctx); e != nil {
+	if e = scrollToBottom(ctx); e != nil {
 		return
 	}
 
@@ -108,33 +106,6 @@ func (f SpysOne) Fetch(ctx context.Context, urlIdx int, url string) (ps []*types
 	}
 
 	return f.parse(ipPort, ts, anon, locations), nil
-}
-
-func (f SpysOne) pageEnd(ctx context.Context) (e error) {
-	var bottom bool
-	for i := 1; true; i++ {
-		if e = chromedp.Run(ctx,
-			chromedp.KeyEvent(kb.End),
-		); e != nil {
-			return errors.Wrapf(e, "failed to send kb.End key #%d", i)
-		}
-
-		log.Debugf("End key sent #%d", i)
-
-		if e = chromedp.Run(ctx,
-			chromedp.Evaluate(jsPageBottom(), &bottom),
-		); e != nil {
-			return errors.Wrapf(e, "failed to check page bottom #%d", i)
-		}
-
-		if bottom {
-			//found footer
-			break
-		}
-
-		time.Sleep(time.Millisecond * 500)
-	}
-	return
 }
 
 //parses the selected values into proxy server instances

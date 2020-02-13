@@ -1,18 +1,19 @@
 package fetcher
 
 import (
-	"regexp"
+	"context"
+	"fmt"
 	"strconv"
 	"strings"
 
-	"github.com/PuerkitoBio/goquery"
 	"github.com/carusyte/roprox/types"
+	"github.com/chromedp/chromedp"
+	"github.com/pkg/errors"
+	"github.com/ssgreg/repeat"
 )
 
 //GatherProxy fetches proxy server from http://www.gatherproxy.com
 type GatherProxy struct{}
-
-//TODO: need web driver to parse dynamic content
 
 //UID returns the unique identifier for this spec.
 func (f GatherProxy) UID() string {
@@ -28,47 +29,117 @@ func (f GatherProxy) Urls() []string {
 	}
 }
 
-//IsGBK returns wheter the web page is GBK encoded.
-func (f GatherProxy) IsGBK() bool {
-	return false
-}
-
 //UseMasterProxy returns whether the fetcher needs a master proxy server
 //to access the free proxy list provider.
 func (f GatherProxy) UseMasterProxy() bool {
 	return true
 }
 
-//ListSelector returns the jQuery selector for searching the proxy server list/table.
-func (f GatherProxy) ListSelector() []string {
-	return []string{
-		// "#tblproxy tbody tr",
-		"#tblproxy tbody script",
-	}
-}
-
 //RefreshInterval determines how often the list should be refreshed, in minutes.
 func (f GatherProxy) RefreshInterval() int {
-	return 10
+	return 20
 }
 
-//ScanItem process each item found in the table determined by ListSelector().
-func (f GatherProxy) ScanItem(i, urlIdx int, s *goquery.Selection) (ps *types.ProxyServer) {
-	js := strings.TrimSpace(s.Text())
-	log.Tracef("found script: %s", js)
-	rx :=
-		`"PROXY_IP":"([0-9\.]*)",.*` +
-			`"PROXY_PORT":"([0-9ABCDEF]*)",.*`
-	r := regexp.MustCompile(rx).FindStringSubmatch(js)
-	if len(r) < 3 {
-		log.Warnf("unable to parse js for %s: %s", f.UID(), js)
+func (f GatherProxy) extract(ctx context.Context) (i, p, a, l []string, e error) {
+	i = make([]string, 0, 4)
+	p = make([]string, 0, 4)
+	a = make([]string, 0, 4)
+	l = make([]string, 0, 4)
+	if e = chromedp.Run(ctx,
+		chromedp.WaitReady("#tblproxy"),
+		chromedp.Evaluate(jsGetText(`#tblproxy > tbody > tr > td:nth-child(2)`), &i),
+		chromedp.Evaluate(jsGetText(`#tblproxy > tbody > tr > td:nth-child(3)`), &p),
+		chromedp.Evaluate(jsGetText(`#tblproxy > tbody > tr > td:nth-child(4)`), &a),
+		chromedp.Evaluate(jsGetText(`#tblproxy > tbody > tr > td:nth-child(5)`), &l),
+	); e != nil {
+		e = errors.Wrap(e, "failed to extract proxy info")
+	}
+	return
+}
+
+func (f GatherProxy) parse(ips, ports, anon, locs []string) (ps []*types.ProxyServer) {
+	for i, ip := range ips {
+		if len(ports) <= i {
+			break
+		}
+		if len(anon) <= i {
+			break
+		}
+		if len(locs) <= i {
+			break
+		}
+		if strings.EqualFold(strings.TrimSpace(anon[i]), "Transparent") {
+			continue
+		}
+		ip = strings.TrimSpace(ip)
+		port := strings.TrimSpace((ports[i]))
+		loc := strings.TrimSpace((locs[i]))
+		ps = append(ps, types.NewProxyServer(f.UID(), ip, port, "http", loc))
+	}
+	return
+}
+
+//Fetch the proxy info
+func (f GatherProxy) Fetch(ctx context.Context, urlIdx int, url string) (ps []*types.ProxyServer, e error) {
+	var ips, ports, anon, locs []string
+	//extract first page
+	if ips, ports, anon, locs, e = f.extract(ctx); e != nil {
+		e = errors.Wrapf(e, "target url: %s", url)
+		log.Error(e)
+	} else {
+		newPS := f.parse(ips, ports, anon, locs)
+		ps = append(ps, newPS...)
+	}
+
+	if e = chromedp.Run(ctx,
+		//click "Show Full List"
+		chromedp.WaitReady("#body > form > p > input"),
+		chromedp.Click("#body > form > p > input"),
+	); e != nil {
+		e = errors.Wrapf(e, "failed to visit full list: %s", url)
+		log.Error(e)
+		return ps, repeat.HintStop(e)
+	}
+
+	var numPage int
+	if e = chromedp.Run(ctx,
+		chromedp.WaitReady(`#psbform > div`),
+		chromedp.JavascriptAttribute(`#psbform > div`, "childElementCount", &numPage),
+	); e != nil {
+		e = errors.Wrapf(e, "failed to page num of pages: %s", url)
+		log.Error(e)
+		return ps, repeat.HintStop(e)
+	}
+
+	if numPage == 1 {
 		return
+	} else if numPage > 5 {
+		numPage = 5
 	}
-	host := strings.TrimSpace(r[1])
-	port, e := strconv.ParseInt(strings.TrimSpace(r[2]), 16, 64)
-	if e != nil {
-		log.Warnf("%s unable to parse proxy port from hex: %s", f.UID(), r[2])
+
+	extraPages := make([]string, numPage-1)
+	for i := 0; i < numPage-1; i++ {
+		extraPages[i] = strconv.Itoa(i + 2)
 	}
-	ps = types.NewProxyServer(f.UID(), host, strconv.Itoa(int(port)), "http", "")
+
+	for _, ep := range extraPages {
+		if e = chromedp.Run(ctx,
+			chromedp.Click(fmt.Sprintf("#psbform > div > a:nth-child(%s)", ep)),
+			chromedp.WaitReady(fmt.Sprintf(`//*[@id="psbform"]/div/span[text()='%s']`, ep)),
+		); e != nil {
+			e = errors.Wrapf(e, "failed to flip to page #%s : %s", ep, url)
+			log.Error(e)
+			return ps, repeat.HintStop(e)
+		}
+
+		if ips, ports, anon, locs, e = f.extract(ctx); e != nil {
+			e = errors.Wrapf(e, "failed to extract page #%s : %s", ep, url)
+			log.Error(e)
+			continue
+		}
+		newPS := f.parse(ips, ports, anon, locs)
+		ps = append(ps, newPS...)
+	}
+
 	return
 }

@@ -20,7 +20,7 @@ var fslist = []t.FetcherSpec{
 	f.GouBanJia{},
 	f.CNProxy{},
 	f.FreeProxyCZ{},
-	// f.GatherProxy{},
+	f.GatherProxy{},
 	f.ProxyListOrg{},
 	f.ProxyListPlus{},
 	f.Xroxy{},
