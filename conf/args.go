@@ -33,6 +33,13 @@ type Arguments struct {
 		LogFilePath string `mapstructure:"log_file_path"`
 	}
 
+	WebDriver struct {
+		Timeout  int  `mapstructure:"timeout"`
+		Headless bool `mapstructure:"headless"`
+		NoImage  bool `mapstructure:"no_image"`
+		MaxRetry int  `mapstructure:"max_retry"`
+	}
+
 	DataSource struct {
 		UserAgents        string `mapstructure:"user_agents"`
 		UserAgentLifespan int    `mapstructure:"user_agent_lifespan"`

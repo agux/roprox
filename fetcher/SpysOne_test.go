@@ -2,6 +2,8 @@ package fetcher
 
 import (
 	"context"
+	"fmt"
+	"net/http"
 	"testing"
 	"time"
 
@@ -11,7 +13,6 @@ import (
 )
 
 func TestFetch_SpysOne(t *testing.T) {
-	//FIXME unable to fetch 500 records by selecting the record number
 	log.Infof("config file used: %s", conf.ConfigFileUsed())
 	chpx := make(chan *types.ProxyServer, 100)
 	go func() {
@@ -25,6 +26,19 @@ func TestFetch_SpysOne(t *testing.T) {
 	}
 }
 
+func TestSelect_SpysOne(t *testing.T) {
+	log.Infof("config file used: %s", conf.ConfigFileUsed())
+	chpx := make(chan *types.ProxyServer, 100)
+	go testServer(":8544")
+	gp := &SpysOne{[]string{
+		"http://localhost:8544",
+	}}
+	for i, url := range gp.Urls() {
+		fetchFor(i, url, chpx, gp)
+	}
+
+}
+
 func TestDynamicSpysOne(t *testing.T) {
 	// create context
 	o := append(chromedp.DefaultExecAllocatorOptions[:],
@@ -32,7 +46,7 @@ func TestDynamicSpysOne(t *testing.T) {
 		chromedp.ProxyServer("socks5://localhost:1080"),
 	)
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(conf.Args.HTTPTimeOut) * time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(conf.Args.HTTPTimeOut)*time.Second)
 	defer cancel()
 
 	ctx, cancel = chromedp.NewExecAllocator(ctx, o...)
@@ -66,3 +80,53 @@ func TestDynamicSpysOne(t *testing.T) {
 
 	// log.Println(strings.TrimSpace(res))
 }
+
+// testServer is a simple HTTP server that displays the passed headers in the html.
+func testServer(addr string) error {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/", func(res http.ResponseWriter, _ *http.Request) {
+		fmt.Fprint(res, indexHTML)
+	})
+	return http.ListenAndServe(addr, mux)
+}
+
+const indexHTML = `<!doctype html>
+<html>
+<head>
+  <title>example</title>
+</head>
+<body>
+  <div id="box1" style="display:none">
+    <div id="box2">
+      <p>box2</p>
+    </div>
+  </div>
+  <div id="box3">
+    <h2>box3</h3>
+    <p id="box4">
+      box4 text
+      <input id="input1" value="some value"><br><br>
+      <textarea id="textarea1" style="width:500px;height:400px">textarea</textarea><br><br>
+      <input id="input2" type="submit" value="Next">
+      <select id="xpp1" onchange="this.form.submit();">
+        <option value="one">1</option>
+        <option value="two">2</option>
+        <option value="three">3</option>
+		<option value="four">4</option>
+		<option value="five">5</option>
+		<option value="six">6</option>
+	  </select>
+	  <select id="long_list" onchange="this.form.submit();" size="2000">
+        <option value="one">this is a very long list</option>
+        <option value="two">2</option>
+        <option value="three">3</option>
+		<option value="four">4</option>
+		<option value="five">5</option>
+		<option value="six">6</option>
+	  </select>
+	  <br/>
+	  <p>You've reached the end of page.</p>
+    </p>
+  </div>
+</body>
+</html>`

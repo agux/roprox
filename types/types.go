@@ -1,13 +1,13 @@
 package types
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"time"
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/carusyte/roprox/logging"
-	"github.com/chromedp/chromedp"
 )
 
 var log = logging.Logger
@@ -93,10 +93,8 @@ type StaticHTMLFetcher interface {
 
 //DynamicHTMLFetcher fetches target url by using web driver
 type DynamicHTMLFetcher interface {
-	//Actions return the webdriver actions after the specified url is visited
-	Actions(urlIdx int, url string) (tasks chromedp.Tasks, values interface{})
-	//OnComplete parses the selected values into proxy server instances
-	OnComplete(values interface{}) (ps []*ProxyServer)
+	//Fetch the proxy info
+	Fetch(ctx context.Context, urlIdx int, url string ) (ps []*ProxyServer, e error)
 }
 
 //UserAgent represents user_agent table structure.

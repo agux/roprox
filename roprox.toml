@@ -21,6 +21,12 @@ eviction_score_threshold = 50.0
 [Logging]
 log_file_path = "roprox.log"
 
+[WebDriver]
+headless = true
+no_image = true
+max_retry = 2
+timeout = 120
+
 [DataSource]
 user_agents = "https://developers.whatismybrowser.com/api/docs/latest/user-agent-database-dump-url-csv-sample.tar.gz"
 user_agent_lifespan = 10

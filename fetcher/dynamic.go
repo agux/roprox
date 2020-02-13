@@ -16,15 +16,42 @@ func jsGetText(sel string) (js string) {
 					// Check the element has no children && that it is not empty
 					//	text.push(current.textContent + ',');
 					//}
-					text.push(current.innerText + ",")
+					text.push(current.innerText)
 				}
 				return text
 			 };`
 
 	invokeFuncJS := `var a = getText('` + sel + `'); a;`
 	js = strings.Join([]string{funcJS, invokeFuncJS}, " ")
-	log.Debugf("javascript: %s", js)
+	log.Tracef("javascript: %s", js)
 	return js
+}
+
+func jsPageBottom() (js string) {
+	js = `
+		function isPageBottom() {
+			var b;
+			try {
+				b = (window.innerHeight + window.scrollY) >= document.body.offsetHeight;
+			} catch(ex1) {
+				try {
+					b = (window.innerHeight + window.pageYOffset) >= document.body.offsetHeight - 2;
+				} catch(ex2) {
+					try {
+						b = (window.innerHeight + window.scrollY) >= document.body.scrollHeight;
+					} catch(ex3) {
+						var scrollTop = (document.documentElement && document.documentElement.scrollTop) || document.body.scrollTop;
+						var scrollHeight = (document.documentElement && document.documentElement.scrollHeight) || document.body.scrollHeight;
+						b = (scrollTop + window.innerHeight) >= scrollHeight;
+					}
+				}
+			}
+			return b;
+		};
+		var a = isPageBottom(); a;
+	`
+	log.Tracef("javascript: %s", js)
+	return
 }
 
 func jsSelect(sel, val string) (js string) {
@@ -50,6 +77,6 @@ func jsSelect(sel, val string) (js string) {
 	`
 	invokeFuncJS := fmt.Sprintf(`var a = setSelectedIndex('%s','%s'); a;`, sel, val)
 	js = strings.Join([]string{funcJS, invokeFuncJS}, " ")
-	log.Debugf("javascript: %s", js)
+	log.Tracef("javascript: %s", js)
 	return js
 }

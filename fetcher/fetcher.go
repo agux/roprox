@@ -9,6 +9,8 @@ import (
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/chromedp/chromedp"
+	"github.com/pkg/errors"
+	"github.com/ssgreg/repeat"
 
 	//shorten type reference
 
@@ -29,48 +31,87 @@ func Fetch(chpx chan<- *t.ProxyServer, fspec t.FetcherSpec) {
 }
 
 func fetchDynamicHTML(urlIdx int, url string, chpx chan<- *t.ProxyServer, fspec t.FetcherSpec) (c int) {
-	var (
-		ctx        context.Context
-		c1, c2, c3 context.CancelFunc
-	)
-	defer func() {
-		if c1 != nil {
-			c1()
-		}
-		if c2 != nil {
-			c2()
-		}
-		if c3 != nil {
-			c3()
-		}
-	}()
-
 	useMasterProxy := fspec.UseMasterProxy()
-	o := chromedp.DefaultExecAllocatorOptions[:]
+	// o := chromedp.DefaultExecAllocatorOptions[:]
+	var o []chromedp.ExecAllocatorOption
 	if useMasterProxy {
 		o = append(o, chromedp.ProxyServer("socks5://localhost:1080"))
 	}
+	if conf.Args.WebDriver.NoImage {
+		o = append(o, chromedp.Flag("blink-settings", "imagesEnabled=false"))
+	}
+	for _, opt := range chromedp.DefaultExecAllocatorOptions {
+		if reflect.ValueOf(chromedp.Headless).Pointer() == reflect.ValueOf(opt).Pointer() &&
+			!conf.Args.WebDriver.Headless {
+			log.Debug("ignored headless mode")
+			continue
+		}
+		o = append(o, opt)
+	}
 
-	// create context
-	ctx, c1 = context.WithTimeout(context.Background(), time.Duration(conf.Args.HTTPTimeOut)*time.Second)
-	ctx, c2 = chromedp.NewExecAllocator(ctx, o...)
-	ctx, c3 = chromedp.NewContext(ctx)
+	var ps []*t.ProxyServer
 
-	f := fspec.(t.DynamicHTMLFetcher)
-	actions, values := f.Actions(urlIdx, url)
-	tasks := chromedp.Tasks{chromedp.Navigate(url)}
-	tasks = append(tasks, actions...)
-	// run task list
-	if e := chromedp.Run(ctx, tasks); e != nil {
-		log.Errorf("failed to run webdriver for %+s: %+v", url, e)
+	op := func(rc int) (e error) {
+		var (
+			ctx        context.Context
+			c1, c2, c3 context.CancelFunc
+		)
+		defer func() {
+			if c1 != nil {
+				c1()
+			}
+			if c2 != nil {
+				c2()
+			}
+			if c3 != nil {
+				c3()
+			}
+		}()
+		// create context
+		ctx, c1 = context.WithTimeout(context.Background(), time.Duration(conf.Args.WebDriver.Timeout)*time.Second)
+		ctx, c2 = chromedp.NewExecAllocator(ctx, o...)
+		ctx, c3 = chromedp.NewContext(ctx)
+
+		// navigate
+		if e = chromedp.Run(ctx, chromedp.Navigate(url)); e != nil {
+			e = errors.Wrapf(e, "#%d failed to run webdriver for %+s", rc, url)
+			log.Error(e)
+			return repeat.HintTemporary(e)
+		}
+		if ps, e = fspec.(t.DynamicHTMLFetcher).Fetch(ctx, urlIdx, url); e != nil {
+			stop := false
+			if repeat.IsStop(e) {
+				stop = true
+			}
+			e = errors.Wrapf(e, "#%d failed to run webdriver for %+s", rc, url)
+			log.Error(e)
+			if stop {
+				return repeat.HintStop(e)
+			}
+			return repeat.HintTemporary(e)
+		}
 		return
 	}
-	log.Tracef("values returned from %s:\n%+v", url, values)
-	ps := f.OnComplete(values)
+
+	e := repeat.Repeat(
+		repeat.FnWithCounter(op),
+		repeat.StopOnSuccess(),
+		repeat.LimitMaxTries(conf.Args.WebDriver.MaxRetry),
+		repeat.WithDelay(
+			repeat.FullJitterBackoff(500*time.Millisecond).WithMaxDelay(10*time.Second).Set(),
+		),
+	)
+	if e != nil {
+		e = errors.Wrapf(e, "max retry exceeded, giving up: %+s", url)
+		log.Error(e)
+		return
+	}
+
 	for _, p := range ps {
 		chpx <- p
 		c++
 	}
+
 	return
 }
 
