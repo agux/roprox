@@ -54,6 +54,6 @@ func (f CoderBusy) RefreshInterval() int {
 func (f CoderBusy) ScanItem(i, urlIdx int, s *goquery.Selection) (ps *types.ProxyServer) {
 	host := strings.TrimSpace(s.Find("td:nth-child(1)").Text())
 	port := strings.TrimSpace(s.Find("td.port-box").Text())
-	ps = types.NewProxyServer(f.UID(), host, port, "http")
+	ps = types.NewProxyServer(f.UID(), host, port, "http", "")
 	return
 }

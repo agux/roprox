@@ -57,6 +57,6 @@ func (f Data5u) ScanItem(i, urlIdx int, s *goquery.Selection) (ps *types.ProxySe
 	}
 	host := strings.TrimSpace(s.Find("span:nth-child(1) li").Text())
 	port := strings.TrimSpace(s.Find("span:nth-child(2) li").Text())
-	ps = types.NewProxyServer(f.UID(), host, port, "http")
+	ps = types.NewProxyServer(f.UID(), host, port, "http", "")
 	return
 }

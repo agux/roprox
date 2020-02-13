@@ -54,6 +54,6 @@ func (f ProxyListPlus) ScanItem(i, urlIdx int, s *goquery.Selection) (ps *types.
 	}
 	host := strings.TrimSpace(s.Find("td:nth-child(2)").Text())
 	port := strings.TrimSpace(s.Find("td:nth-child(3)").Text())
-	ps = types.NewProxyServer(f.UID(), host, port, "http")
+	ps = types.NewProxyServer(f.UID(), host, port, "http", "")
 	return
 }

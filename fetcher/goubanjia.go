@@ -74,6 +74,6 @@ func (f GouBanJia) ScanItem(i, urlIdx int, s *goquery.Selection) (ps *types.Prox
 	}
 	host := strings.Join(vals[:len(vals)-1], "")
 	port := vals[len(vals)-1]
-	ps = types.NewProxyServer(f.UID(), host, port, "http")
+	ps = types.NewProxyServer(f.UID(), host, port, "http", "")
 	return
 }

@@ -67,6 +67,6 @@ func (f Xroxy) ScanItem(i, urlIdx int, s *goquery.Selection) (ps *types.ProxySer
 	}
 	host := strings.TrimSpace(s.Find("td:nth-child(2) a").Text())
 	port := strings.TrimSpace(s.Find("td:nth-child(3) a").Text())
-	ps = types.NewProxyServer(f.UID(), host, port, pstype)
+	ps = types.NewProxyServer(f.UID(), host, port, pstype, "")
 	return
 }

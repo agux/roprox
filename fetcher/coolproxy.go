@@ -75,7 +75,7 @@ func (f CoolProxy) ParseJSON(payload []byte) (ps []*types.ProxyServer) {
 			continue
 		}
 		port := strconv.Itoa(int(fval))
-		ps = append(ps, types.NewProxyServer(f.UID(), host, port, "http"))
+		ps = append(ps, types.NewProxyServer(f.UID(), host, port, "http", ""))
 	}
 	return
 }

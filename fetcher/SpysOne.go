@@ -175,13 +175,7 @@ func (f SpysOne) parse(ipPort, ts, anon, locations []string) (ps []*types.ProxyS
 
 		loc := strings.TrimSpace(strings.ReplaceAll(locations[i], "!", ""))
 
-		ps = append(ps, &types.ProxyServer{
-			Source: f.UID(),
-			Host:   host,
-			Port:   port,
-			Type:   t,
-			Loc:    loc,
-		})
+		ps = append(ps, types.NewProxyServer(f.UID(), host, port, t, loc))
 	}
 	return
 }

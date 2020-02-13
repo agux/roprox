@@ -57,6 +57,6 @@ func (f KuaiDaiLi) ScanItem(i, urlIdx int, s *goquery.Selection) (ps *types.Prox
 	}
 	host := strings.TrimSpace(s.Find("td:nth-child(1)").Text())
 	port := strings.TrimSpace(s.Find("td:nth-child(2)").Text())
-	ps = types.NewProxyServer(f.UID(), host, port, "http")
+	ps = types.NewProxyServer(f.UID(), host, port, "http", "")
 	return
 }

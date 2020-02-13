@@ -56,6 +56,6 @@ func (f HinkyDink) ScanItem(i, urlIdx int, s *goquery.Selection) (ps *types.Prox
 	host := strings.TrimSpace(s.Find("td:nth-child(1)").Text())
 	host = strings.TrimRight(host, `*`)
 	port := strings.TrimSpace(s.Find("td:nth-child(2)").Text())
-	ps = types.NewProxyServer(f.UID(), host, port, "http")
+	ps = types.NewProxyServer(f.UID(), host, port, "http", "")
 	return
 }

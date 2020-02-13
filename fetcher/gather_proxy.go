@@ -69,6 +69,6 @@ func (f GatherProxy) ScanItem(i, urlIdx int, s *goquery.Selection) (ps *types.Pr
 	if e != nil {
 		log.Warnf("%s unable to parse proxy port from hex: %s", f.UID(), r[2])
 	}
-	ps = types.NewProxyServer(f.UID(), host, strconv.Itoa(int(port)), "http")
+	ps = types.NewProxyServer(f.UID(), host, strconv.Itoa(int(port)), "http", "")
 	return
 }

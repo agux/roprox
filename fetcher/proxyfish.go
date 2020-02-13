@@ -72,7 +72,7 @@ func (p ProxyFish) ParseJSON(payload []byte) (ps []*types.ProxyServer) {
 				continue
 			}
 		}
-		ps = append(ps, types.NewProxyServer(p.UID(), r["ip"], r["port"], strings.ToLower(r["type"])))
+		ps = append(ps, types.NewProxyServer(p.UID(), r["ip"], r["port"], strings.ToLower(r["type"]), ""))
 	}
 	return
 }

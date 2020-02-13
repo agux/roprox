@@ -49,12 +49,13 @@ func (p *ProxyServer) String() string {
 }
 
 //NewProxyServer creates an instance of ProxyServer.
-func NewProxyServer(source, host, port, stype string) *ProxyServer {
+func NewProxyServer(source, host, port, ptype, loc string) *ProxyServer {
 	return &ProxyServer{
 		Source:      source,
 		Host:        host,
 		Port:        port,
-		Type:        stype,
+		Type:        ptype,
+		Loc:         loc,
 		Status:      UNK,
 		Fail:        0,
 		LastCheck:   time.Now().Format(DateTimeFormat),
@@ -94,7 +95,7 @@ type StaticHTMLFetcher interface {
 //DynamicHTMLFetcher fetches target url by using web driver
 type DynamicHTMLFetcher interface {
 	//Fetch the proxy info
-	Fetch(ctx context.Context, urlIdx int, url string ) (ps []*ProxyServer, e error)
+	Fetch(ctx context.Context, urlIdx int, url string) (ps []*ProxyServer, e error)
 }
 
 //UserAgent represents user_agent table structure.

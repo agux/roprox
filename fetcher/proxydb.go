@@ -64,6 +64,6 @@ func (f ProxyDB) ScanItem(i, urlIdx int, s *goquery.Selection) (ps *types.ProxyS
 	}
 	host := strings.TrimSpace(vals[0])
 	port := strings.TrimSpace(vals[1])
-	ps = types.NewProxyServer(f.UID(), host, port, "http")
+	ps = types.NewProxyServer(f.UID(), host, port, "http", "")
 	return
 }

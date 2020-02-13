@@ -66,6 +66,6 @@ func (f Z66IP) ScanItem(i, urlIdx int, s *goquery.Selection) (ps *types.ProxySer
 		//invalid port
 		return
 	}
-	ps = types.NewProxyServer(f.UID(), host, port, "http")
+	ps = types.NewProxyServer(f.UID(), host, port, "http", "")
 	return
 }

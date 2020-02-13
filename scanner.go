@@ -98,18 +98,19 @@ func saveProxyServer(bucket []*t.ProxyServer) {
 	}
 
 	valueStrings := make([]string, 0, len(bucket))
-	valueArgs := make([]interface{}, 0, len(bucket)*7)
-	for _, e := range bucket {
-		valueStrings = append(valueStrings, "(?, ?, ?, ?, ?, ?, ?)")
-		valueArgs = append(valueArgs, e.Source)
-		valueArgs = append(valueArgs, e.Host)
-		valueArgs = append(valueArgs, e.Port)
-		valueArgs = append(valueArgs, e.Type)
-		valueArgs = append(valueArgs, e.Status)
-		valueArgs = append(valueArgs, e.LastCheck)
-		valueArgs = append(valueArgs, e.LastScanned)
+	valueArgs := make([]interface{}, 0, len(bucket)*8)
+	for _, el := range bucket {
+		valueStrings = append(valueStrings, "(?, ?, ?, ?, ?, ?, ?, ?)")
+		valueArgs = append(valueArgs, el.Source)
+		valueArgs = append(valueArgs, el.Host)
+		valueArgs = append(valueArgs, el.Port)
+		valueArgs = append(valueArgs, el.Type)
+		valueArgs = append(valueArgs, el.Loc)
+		valueArgs = append(valueArgs, el.Status)
+		valueArgs = append(valueArgs, el.LastCheck)
+		valueArgs = append(valueArgs, el.LastScanned)
 	}
-	stmt := fmt.Sprintf("INSERT IGNORE INTO proxy_list (source,host,port,type,status,last_check,last_scanned) VALUES %s",
+	stmt := fmt.Sprintf("INSERT IGNORE INTO proxy_list (source,host,port,type,loc,status,last_check,last_scanned) VALUES %s",
 		// "on duplicate key update status=values(status),last_check=values(last_check),last_scanned=values(last_scanned)",
 		strings.Join(valueStrings, ","))
 	retry := 10

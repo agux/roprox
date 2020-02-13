@@ -82,6 +82,6 @@ func (f FreeProxyCZ) ScanItem(i, urlIdx int, s *goquery.Selection) (ps *types.Pr
 		return
 	}
 	port := strings.TrimSpace(s.Find("td:nth-child(2) span").Text())
-	ps = types.NewProxyServer(f.UID(), host, port, "http")
+	ps = types.NewProxyServer(f.UID(), host, port, "http", "")
 	return
 }
