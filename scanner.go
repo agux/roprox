@@ -57,6 +57,7 @@ func launchScanners(chjobs <-chan string, chpx chan<- *t.ProxyServer) {
 				fetcher.Fetch(chpx, proxies[uid])
 			}
 		}()
+		time.Sleep(time.Millisecond * 1500)
 	}
 }
 

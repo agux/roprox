@@ -46,7 +46,6 @@ func (f GatherProxy) extract(ctx context.Context) (i, p, a, l []string, e error)
 	a = make([]string, 0, 4)
 	l = make([]string, 0, 4)
 	if e = chromedp.Run(ctx,
-		chromedp.WaitReady("#tblproxy"),
 		chromedp.Evaluate(jsGetText(`#tblproxy > tbody > tr > td:nth-child(2)`), &i),
 		chromedp.Evaluate(jsGetText(`#tblproxy > tbody > tr > td:nth-child(3)`), &p),
 		chromedp.Evaluate(jsGetText(`#tblproxy > tbody > tr > td:nth-child(4)`), &a),
@@ -81,6 +80,9 @@ func (f GatherProxy) parse(ips, ports, anon, locs []string) (ps []*types.ProxySe
 
 //Fetch the proxy info
 func (f GatherProxy) Fetch(ctx context.Context, urlIdx int, url string) (ps []*types.ProxyServer, e error) {
+	if e = f.waitAndScroll(ctx, url); e != nil {
+		return
+	}
 	var ips, ports, anon, locs []string
 	//extract first page
 	if ips, ports, anon, locs, e = f.extract(ctx); e != nil {
@@ -94,19 +96,28 @@ func (f GatherProxy) Fetch(ctx context.Context, urlIdx int, url string) (ps []*t
 	if e = chromedp.Run(ctx,
 		//click "Show Full List"
 		chromedp.WaitReady("#body > form > p > input"),
-		chromedp.Click("#body > form > p > input"),
+		// chromedp.Click("#body > form > p > input"),
+		chromedp.Submit(`#body > form > p > input`),
 	); e != nil {
 		e = errors.Wrapf(e, "failed to visit full list: %s", url)
 		log.Error(e)
 		return ps, repeat.HintStop(e)
 	}
 
+	// if e = captureScreen(ctx, f.UID(), 90); e != nil {
+	// 	log.Errorln("failed to take screenshot,", e)
+	// }
+
+	// if e = dumpHTML(ctx, f.UID()); e != nil {
+	// 	log.Errorf("failed to dump HTML file for %s: %+v", url, e)
+	// }
+
 	var numPage int
 	if e = chromedp.Run(ctx,
-		chromedp.WaitReady(`#psbform > div`),
-		chromedp.JavascriptAttribute(`#psbform > div`, "childElementCount", &numPage),
+		chromedp.WaitReady(`div.pagenavi`),
+		chromedp.JavascriptAttribute(`div.pagenavi`, "childElementCount", &numPage),
 	); e != nil {
-		e = errors.Wrapf(e, "failed to page num of pages: %s", url)
+		e = errors.Wrapf(e, "failed to get page num of pages: %s", url)
 		log.Error(e)
 		return ps, repeat.HintStop(e)
 	}
@@ -123,13 +134,20 @@ func (f GatherProxy) Fetch(ctx context.Context, urlIdx int, url string) (ps []*t
 	}
 
 	for _, ep := range extraPages {
+		if e = f.waitAndScroll(ctx, url); e != nil {
+			return
+		}
 		if e = chromedp.Run(ctx,
-			chromedp.Click(fmt.Sprintf("#psbform > div > a:nth-child(%s)", ep)),
-			chromedp.WaitReady(fmt.Sprintf(`//*[@id="psbform"]/div/span[text()='%s']`, ep)),
+			chromedp.Click(fmt.Sprintf("div.pagenavi > a:nth-child(%s)", ep)),
+			chromedp.WaitReady(fmt.Sprintf(`//div[@class='pagenavi']/span[text()='%s']`, ep)),
 		); e != nil {
 			e = errors.Wrapf(e, "failed to flip to page #%s : %s", ep, url)
 			log.Error(e)
 			return ps, repeat.HintStop(e)
+		}
+
+		if e = f.waitAndScroll(ctx, url); e != nil {
+			return
 		}
 
 		if ips, ports, anon, locs, e = f.extract(ctx); e != nil {
@@ -141,5 +159,20 @@ func (f GatherProxy) Fetch(ctx context.Context, urlIdx int, url string) (ps []*t
 		ps = append(ps, newPS...)
 	}
 
+	return
+}
+
+func (f GatherProxy) waitAndScroll(ctx context.Context, url string) (e error) {
+	if e = chromedp.Run(ctx,
+		chromedp.WaitVisible("#tblproxy"),
+	); e != nil {
+		e = errors.Wrapf(e, "failed to wait #tblproxy : %s", url)
+		log.Error(e)
+		return
+	} else if te := scrollToBottom(ctx); te != nil {
+		te = errors.Wrapf(e, "failed scroll page : %s", url)
+		log.Error(e)
+		// try to continue if failed to scroll
+	}
 	return
 }

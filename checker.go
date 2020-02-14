@@ -82,6 +82,7 @@ func queryStaleServers(chjobs chan<- *types.ProxyServer) {
 
 func probe(chjobs <-chan *types.ProxyServer) {
 	for i := 0; i < conf.Args.ProbeSize; i++ {
+		time.Sleep(time.Millisecond * 1500)
 		go func() {
 			for ps := range chjobs {
 				var e error

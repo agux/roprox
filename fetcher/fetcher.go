@@ -2,6 +2,7 @@ package fetcher
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"reflect"
@@ -49,8 +50,7 @@ func fetchDynamicHTML(urlIdx int, url string, chpx chan<- *t.ProxyServer, fspec 
 		o = append(o, opt)
 	}
 
-	var ps []*t.ProxyServer
-
+	psmap := make(map[string]*t.ProxyServer)
 	op := func(rc int) (e error) {
 		var (
 			ctx        context.Context
@@ -78,7 +78,11 @@ func fetchDynamicHTML(urlIdx int, url string, chpx chan<- *t.ProxyServer, fspec 
 			log.Error(e)
 			return repeat.HintTemporary(e)
 		}
+		var ps []*t.ProxyServer
 		if ps, e = fspec.(t.DynamicHTMLFetcher).Fetch(ctx, urlIdx, url); e != nil {
+			for _, el := range ps {
+				psmap[fmt.Sprintf("%s:%s", el.Host, el.Port)] = el
+			}
 			stop := false
 			if repeat.IsStop(e) {
 				stop = true
@@ -89,6 +93,9 @@ func fetchDynamicHTML(urlIdx int, url string, chpx chan<- *t.ProxyServer, fspec 
 				return repeat.HintStop(e)
 			}
 			return repeat.HintTemporary(e)
+		}
+		for _, el := range ps {
+			psmap[fmt.Sprintf("%s:%s", el.Host, el.Port)] = el
 		}
 		return
 	}
@@ -107,7 +114,7 @@ func fetchDynamicHTML(urlIdx int, url string, chpx chan<- *t.ProxyServer, fspec 
 		return
 	}
 
-	for _, p := range ps {
+	for _, p := range psmap {
 		chpx <- p
 		c++
 	}

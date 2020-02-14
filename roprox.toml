@@ -26,6 +26,7 @@ headless = true
 no_image = true
 max_retry = 2
 timeout = 120
+working_folder = "/home/user"
 
 [DataSource]
 user_agents = "https://developers.whatismybrowser.com/api/docs/latest/user-agent-database-dump-url-csv-sample.tar.gz"

@@ -34,10 +34,11 @@ type Arguments struct {
 	}
 
 	WebDriver struct {
-		Timeout  int  `mapstructure:"timeout"`
-		Headless bool `mapstructure:"headless"`
-		NoImage  bool `mapstructure:"no_image"`
-		MaxRetry int  `mapstructure:"max_retry"`
+		Timeout       int    `mapstructure:"timeout"`
+		Headless      bool   `mapstructure:"headless"`
+		NoImage       bool   `mapstructure:"no_image"`
+		MaxRetry      int    `mapstructure:"max_retry"`
+		WorkingFolder string `mapstructure:"working_folder"`
 	}
 
 	DataSource struct {

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/carusyte/roprox/types"
 	"github.com/chromedp/chromedp"
@@ -53,11 +54,12 @@ func (f SpysOne) Fetch(ctx context.Context, urlIdx int, url string) (ps []*types
 	var str string
 
 	if e = chromedp.Run(ctx,
-		chromedp.WaitReady(`#xpp`),
+		chromedp.WaitVisible(`#xpp`),
 		chromedp.JavascriptAttribute(`#xpp`, `length`, &xppLen),
 		chromedp.TextContent(`#xpp option:last-child`, &str),
 		chromedp.SetAttributeValue(`#xpp`, "multiple", ""),
 		chromedp.SetAttributeValue(`#xpp`, "size", strconv.Itoa(xppLen)),
+		chromedp.Sleep(time.Millisecond*1500),
 		chromedp.Click(`#xpp option:last-child`),
 	); e != nil {
 		e = errors.Wrapf(e, "failed to manipulate #xpp")
