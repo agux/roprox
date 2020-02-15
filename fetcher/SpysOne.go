@@ -2,7 +2,6 @@ package fetcher
 
 import (
 	"context"
-	"fmt"
 	"strconv"
 	"strings"
 	"time"
@@ -28,6 +27,8 @@ func (f SpysOne) Urls() []string {
 		return f.URLs
 	}
 	return []string{
+		`http://spys.one/free-proxy-list/CN/`,
+		`http://spys.one/asia-proxy/`,
 		`http://spys.one/en/anonymous-proxy-list/`,
 		`http://spys.one/en/socks-proxy-list/`,
 	}
@@ -41,7 +42,7 @@ func (f SpysOne) UseMasterProxy() bool {
 
 //RefreshInterval determines how often the list should be refreshed, in minutes.
 func (f SpysOne) RefreshInterval() int {
-	return 30
+	return 45
 }
 
 //Fetch the proxy info.
@@ -50,7 +51,7 @@ func (f SpysOne) Fetch(ctx context.Context, urlIdx int, url string) (ps []*types
 	ts := make([]string, 0, 4)
 	anon := make([]string, 0, 4)
 	locations := make([]string, 0, 4)
-	var max, xppLen int
+	var xppLen int
 	var str string
 
 	if e = chromedp.Run(ctx,
@@ -66,9 +67,9 @@ func (f SpysOne) Fetch(ctx context.Context, urlIdx int, url string) (ps []*types
 		return ps, e
 	}
 	log.Debugf("#xpp len: %d, max record string: %s", xppLen, str)
-	if max, e = strconv.Atoi(str); e != nil {
-		return ps, errors.Wrapf(e, "unable to convert max record string: %s", str)
-	}
+	// if max, e = strconv.Atoi(str); e != nil {
+	// 	return ps, errors.Wrapf(e, "unable to convert max record string: %s", str)
+	// }
 
 	if e = chromedp.Run(ctx,
 		chromedp.WaitReady(`body > table:nth-child(3) > tbody > tr:nth-child(5) > td > table`),
@@ -88,21 +89,26 @@ func (f SpysOne) Fetch(ctx context.Context, urlIdx int, url string) (ps []*types
 		typeSel = `body > table:nth-child(3) > tbody > tr:nth-child(5) ` +
 			`> td > table > tbody > tr:not(:nth-child(2)) > td:nth-child(2)`
 	}
+	anonSel := `body > table:nth-child(3) > tbody > tr:nth-child(5) > td > table > tbody > tr > td:nth-child(3) > a > font`
+	locSel := `body > table:nth-child(3) > tbody > tr:nth-child(5) > td > table > tbody > tr > td:nth-child(4)`
+	if strings.Contains(url, "http://spys.one/free-proxy-list/CN") ||
+		strings.Contains(url, "http://spys.one/asia-proxy/") {
+		anonSel = `body > table:nth-child(3) > tbody > tr:nth-child(5) > td > table > tbody > tr:nth-child(n+4) > td:nth-child(3)`
+		locSel = `body > table:nth-child(3) > tbody > tr:nth-child(5) > td > table > tbody > tr:nth-child(n+4) > td:nth-child(4)`
+	}
 
 	if e = chromedp.Run(ctx,
-		chromedp.WaitReady(fmt.Sprintf(`body > table:nth-child(3) > tbody > tr:nth-child(5) > td `+
-			`> table > tbody > tr:nth-child(%d)`, max)),
+		// chromedp.WaitReady(fmt.Sprintf(`body > table:nth-child(3) > tbody > tr:nth-child(5) > td `+
+		// 	`> table > tbody > tr:nth-child(%d)`, max)),
 		//get ip and port
 		chromedp.Evaluate(jsGetText(`body > table:nth-child(3) > tbody > tr:nth-child(5) `+
 			`> td > table > tbody > tr > td:nth-child(1) > font.spy14`), &ipPort),
 		//get types
 		chromedp.Evaluate(jsGetText(typeSel), &ts),
 		//get anonymity
-		chromedp.Evaluate(jsGetText(`body > table:nth-child(3) > tbody > tr:nth-child(5) `+
-			`> td > table > tbody > tr > td:nth-child(3) > a > font`), &anon),
+		chromedp.Evaluate(jsGetText(anonSel), &anon),
 		//get location
-		chromedp.Evaluate(jsGetText(`body > table:nth-child(3) > tbody > tr:nth-child(5) `+
-			`> td > table > tbody > tr > td:nth-child(4)`), &locations),
+		chromedp.Evaluate(jsGetText(locSel), &locations),
 	); e != nil {
 		return ps, errors.Wrapf(e, "failed to extract proxy info")
 	}
