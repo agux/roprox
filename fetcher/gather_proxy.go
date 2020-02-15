@@ -37,7 +37,7 @@ func (f GatherProxy) UseMasterProxy() bool {
 
 //RefreshInterval determines how often the list should be refreshed, in minutes.
 func (f GatherProxy) RefreshInterval() int {
-	return 20
+	return 30
 }
 
 func (f GatherProxy) extract(ctx context.Context) (i, p, a, l []string, e error) {
