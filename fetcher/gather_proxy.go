@@ -124,8 +124,8 @@ func (f GatherProxy) Fetch(ctx context.Context, urlIdx int, url string) (ps []*t
 
 	if numPage == 1 {
 		return
-	} else if numPage > 5 {
-		numPage = 5
+	} else if numPage > 10 {
+		numPage = 10
 	}
 
 	extraPages := make([]string, numPage-1)
