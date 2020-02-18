@@ -14,6 +14,14 @@ var log = logging.Logger
 
 type ContentType string
 
+type ProxyMode string
+
+const (
+	MasterProxy ProxyMode = "master"
+	RotateProxy ProxyMode = "rotate"
+	Direct      ProxyMode = "direct"
+)
+
 const (
 	//OK indicates the proxy server is available per the last check result
 	OK = "OK"
@@ -69,11 +77,15 @@ type FetcherSpec interface {
 	UID() string
 	//Urls return the server urls that provide the free proxy server lists.
 	Urls() []string
-	//UseMasterProxy returns whether the fetcher needs a master proxy server
-	//to access the free proxy list provider.
-	UseMasterProxy() bool
+	//ProxyMode returns whether to use the following:
+	//Master: the fetcher needs a master proxy server to access the free proxy list provider.
+	//Rotate: the fetcher will use available proxy from database by random
+	//Direct: the fetcher will not use any proxy to access the provider website.
+	ProxyMode() ProxyMode
 	//RefreshInterval determines how often the list should be refreshed, in minutes.
 	RefreshInterval() int
+	//Retry specifies how many times should be retried
+	Retry() int
 }
 
 //JSONFetcher parses target url as JSON payload
@@ -96,6 +108,8 @@ type StaticHTMLFetcher interface {
 type DynamicHTMLFetcher interface {
 	//Fetch the proxy info
 	Fetch(ctx context.Context, urlIdx int, url string) (ps []*ProxyServer, e error)
+	//Headless specifies whether the web driver should be run in headless mode
+	Headless() bool
 }
 
 //UserAgent represents user_agent table structure.

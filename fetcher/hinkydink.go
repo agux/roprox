@@ -8,7 +8,9 @@ import (
 )
 
 //HinkyDink fetches proxy server from http://www.mrhinkydink.com
-type HinkyDink struct{}
+type HinkyDink struct{
+	defaultFetcherSpec
+}
 
 //UID returns the unique identifier for this spec.
 func (f HinkyDink) UID() string {
@@ -28,10 +30,10 @@ func (f HinkyDink) IsGBK() bool {
 	return false
 }
 
-//UseMasterProxy returns whether the fetcher needs a master proxy server
+//ProxyMode returns whether the fetcher needs a master proxy server
 //to access the free proxy list provider.
-func (f HinkyDink) UseMasterProxy() bool {
-	return false
+func (f HinkyDink) ProxyMode() types.ProxyMode {
+	return types.Direct
 }
 
 //ListSelector returns the jQuery selector for searching the proxy server list/table.

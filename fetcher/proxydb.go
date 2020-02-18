@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/carusyte/roprox/conf"
 	"github.com/carusyte/roprox/types"
 	"github.com/chromedp/cdproto/cdp"
 	"github.com/chromedp/chromedp"
@@ -15,6 +16,7 @@ import (
 
 //ProxyDB fetches proxy server from http://proxydb.net/
 type ProxyDB struct {
+	defaultFetcherSpec
 }
 
 //FIXME: protected by g-recaptcha
@@ -31,15 +33,20 @@ func (f ProxyDB) Urls() []string {
 	}
 }
 
-//UseMasterProxy returns whether the fetcher needs a master proxy server
+//ProxyMode returns whether the fetcher needs a master proxy server
 //to access the free proxy list provider.
-func (f ProxyDB) UseMasterProxy() bool {
-	return true
+func (f ProxyDB) ProxyMode() types.ProxyMode {
+	return types.MasterProxy
 }
 
 //RefreshInterval determines how often the list should be refreshed, in minutes.
 func (f ProxyDB) RefreshInterval() int {
 	return 45
+}
+
+//Headless for web driver
+func (f ProxyDB) Headless() bool {
+	return conf.Args.WebDriver.Headless
 }
 
 //Fetch the proxy info.

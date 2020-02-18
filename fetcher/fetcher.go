@@ -16,6 +16,7 @@ import (
 	//shorten type reference
 
 	"github.com/carusyte/roprox/conf"
+	"github.com/carusyte/roprox/types"
 	t "github.com/carusyte/roprox/types"
 	"github.com/carusyte/roprox/util"
 	"golang.org/x/text/encoding/simplifiedchinese"
@@ -32,20 +33,39 @@ func Fetch(chpx chan<- *t.ProxyServer, fspec t.FetcherSpec) {
 }
 
 func fetchDynamicHTML(urlIdx int, url string, chpx chan<- *t.ProxyServer, fspec t.FetcherSpec) (c int) {
-	useMasterProxy := fspec.UseMasterProxy()
+	proxyMode := fspec.ProxyMode()
 	// o := chromedp.DefaultExecAllocatorOptions[:]
+	df := fspec.(t.DynamicHTMLFetcher)
 	var o []chromedp.ExecAllocatorOption
-	if useMasterProxy {
-		o = append(o, chromedp.ProxyServer("socks5://localhost:1080"))
+	switch proxyMode {
+	case types.MasterProxy:
+		p := fmt.Sprintf("socks5://%s", conf.Args.Network.MasterProxyAddr)
+		log.Debugf("using proxy: %s", p)
+		o = append(o, chromedp.ProxyServer(p))
+	case types.RotateProxy:
+		var rpx *types.ProxyServer
+		var e error
+		if rpx, e = util.PickProxy(); e != nil {
+			log.Fatalf("%s unable to pick rotate proxy: %+v", fspec.UID(), e)
+			return
+		}
+		//FIXME need a way to quickly retry when using rotate proxy
+		p := fmt.Sprintf("%s://%s:%s", rpx.Type, rpx.Host, rpx.Port)
+		log.Debugf("using proxy: %s", p)
+		o = append(o, chromedp.ProxyServer(p))
+	}
+	if types.Direct != proxyMode {
 		if ua, e := util.PickUserAgent(); e != nil {
 			log.Fatalf("failed to pick user agents from the pool: %+v", e)
+		} else {
 			o = append(o, chromedp.UserAgent(ua))
 		}
 	}
 	if conf.Args.WebDriver.NoImage {
 		o = append(o, chromedp.Flag("blink-settings", "imagesEnabled=false"))
 	}
-	if conf.Args.WebDriver.Headless {
+	if df.Headless() {
+		log.Debug("headless mode is enabled")
 		o = append(o, chromedp.Headless)
 	}
 	o = append(o, chromedp.NoFirstRun, chromedp.NoDefaultBrowserCheck)
@@ -93,7 +113,7 @@ func fetchDynamicHTML(urlIdx int, url string, chpx chan<- *t.ProxyServer, fspec 
 			return repeat.HintTemporary(e)
 		}
 		var ps []*t.ProxyServer
-		if ps, e = fspec.(t.DynamicHTMLFetcher).Fetch(ctx, urlIdx, url); e != nil {
+		if ps, e = df.Fetch(ctx, urlIdx, url); e != nil {
 			for _, el := range ps {
 				psmap[fmt.Sprintf("%s:%s", el.Host, el.Port)] = el
 			}
@@ -117,7 +137,7 @@ func fetchDynamicHTML(urlIdx int, url string, chpx chan<- *t.ProxyServer, fspec 
 	e := repeat.Repeat(
 		repeat.FnWithCounter(op),
 		repeat.StopOnSuccess(),
-		repeat.LimitMaxTries(conf.Args.WebDriver.MaxRetry),
+		repeat.LimitMaxTries(fspec.Retry()),
 		repeat.WithDelay(
 			repeat.FullJitterBackoff(500*time.Millisecond).WithMaxDelay(10*time.Second).Set(),
 		),
@@ -139,11 +159,10 @@ func fetchDynamicHTML(urlIdx int, url string, chpx chan<- *t.ProxyServer, fspec 
 func fetchStaticHTML(urlIdx int, url string, chpx chan<- *t.ProxyServer, fspec t.FetcherSpec) (c int) {
 	htmlFetcher := fspec.(t.StaticHTMLFetcher)
 	gbk := htmlFetcher.IsGBK()
-	useMasterProxy := fspec.UseMasterProxy()
 
 	selectors := htmlFetcher.ListSelector()
 	sel := ""
-	res, e := util.HTTPGetResponse(url, nil, useMasterProxy, true)
+	res, e := util.HTTPGetResponse(url, nil, fspec.ProxyMode() == types.MasterProxy, true)
 	if e != nil {
 		log.Errorf("failed to get free proxy list from %s, giving up %+v", url, e)
 		return
@@ -186,8 +205,7 @@ func fetchStaticHTML(urlIdx int, url string, chpx chan<- *t.ProxyServer, fspec t
 }
 
 func fetchJSON(urlIdx int, url string, chpx chan<- *t.ProxyServer, fspec t.FetcherSpec) (c int) {
-	useMasterProxy := fspec.UseMasterProxy()
-	res, e := util.HTTPGetResponse(url, nil, useMasterProxy, true)
+	res, e := util.HTTPGetResponse(url, nil, fspec.ProxyMode() == types.MasterProxy, true)
 	if e != nil {
 		log.Errorf("failed to get free proxy list from %s, giving up %+v", url, e)
 		return

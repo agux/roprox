@@ -8,7 +8,9 @@ import (
 )
 
 //CoderBusy fetches proxy server from https://proxy.coderbusy.com
-type CoderBusy struct{}
+type CoderBusy struct{
+	defaultFetcherSpec
+}
 
 //UID returns the unique identifier for this spec.
 func (f CoderBusy) UID() string {
@@ -32,10 +34,10 @@ func (f CoderBusy) IsGBK() bool {
 	return false
 }
 
-//UseMasterProxy returns whether the fetcher needs a master proxy server
+//ProxyMode returns whether the fetcher needs a master proxy server
 //to access the free proxy list provider.
-func (f CoderBusy) UseMasterProxy() bool {
-	return false
+func (f CoderBusy) ProxyMode() types.ProxyMode {
+	return types.Direct
 }
 
 //ListSelector returns the jQuery selector for searching the proxy server list/table.

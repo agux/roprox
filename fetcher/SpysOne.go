@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/carusyte/roprox/conf"
 	"github.com/carusyte/roprox/types"
 	"github.com/chromedp/chromedp"
 	"github.com/pkg/errors"
@@ -21,6 +22,10 @@ func (f SpysOne) UID() string {
 	return "SpysOne"
 }
 
+func (f SpysOne) Retry() int{
+	return conf.Args.DataSource.SpysOne.Retry
+}
+
 //Urls return the server urls that provide the free proxy server lists.
 func (f SpysOne) Urls() []string {
 	if len(f.URLs) > 0 {
@@ -34,15 +39,20 @@ func (f SpysOne) Urls() []string {
 	}
 }
 
-//UseMasterProxy returns whether the fetcher needs a master proxy server
+//ProxyMode returns whether the fetcher needs a master proxy server
 //to access the free proxy list provider.
-func (f SpysOne) UseMasterProxy() bool {
-	return true
+func (f SpysOne) ProxyMode() types.ProxyMode {
+	return types.ProxyMode(conf.Args.DataSource.SpysOne.ProxyMode)
 }
 
 //RefreshInterval determines how often the list should be refreshed, in minutes.
 func (f SpysOne) RefreshInterval() int {
-	return 45
+	return conf.Args.DataSource.SpysOne.RefreshInterval
+}
+
+//Headless for web driver
+func (f SpysOne) Headless() bool {
+	return conf.Args.DataSource.SpysOne.Headless
 }
 
 //Fetch the proxy info.

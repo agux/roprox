@@ -8,7 +8,9 @@ import (
 )
 
 //CNProxy fetches proxy server from http://cn-proxy.com/
-type CNProxy struct{}
+type CNProxy struct{
+	defaultFetcherSpec
+}
 
 //UID returns the unique identifier for this spec.
 func (f CNProxy) UID() string {
@@ -28,10 +30,10 @@ func (f CNProxy) IsGBK() bool {
 	return false
 }
 
-//UseMasterProxy returns whether the fetcher needs a master proxy server
+//ProxyMode returns whether the fetcher needs a master proxy server
 //to access the free proxy list provider.
-func (f CNProxy) UseMasterProxy() bool {
-	return true
+func (f CNProxy) ProxyMode() types.ProxyMode {
+	return types.MasterProxy
 }
 
 //ListSelector returns the jQuery selector for searching the proxy server list/table.

@@ -17,9 +17,6 @@ var vp *viper.Viper
 //Arguments arguments struct type
 type Arguments struct {
 	LogLevel               string  `mapstructure:"log_level"`
-	MasterProxyAddr        string  `mapstructure:"master_proxy_addr"`
-	HTTPRetry              int     `mapstructure:"http_retry"`
-	HTTPTimeOut            int     `mapstructure:"http_timeout"`
 	ScannerPoolSize        int     `mapstructure:"scanner_pool_size"`
 	ScannerMaxRetry        int     `mapstructure:"scanner_max_retry"`
 	ProbeSize              int     `mapstructure:"probe_size"`
@@ -33,6 +30,14 @@ type Arguments struct {
 		LogFilePath string `mapstructure:"log_file_path"`
 	}
 
+	Network struct {
+		MasterProxyAddr           string  `mapstructure:"master_proxy_addr"`
+		DefaultUserAgent          string  `mapstructure:"default_user_agent"`
+		HTTPTimeout               int     `mapstructure:"http_timeout"`
+		HTTPRetry                 int     `mapstructure:"http_retry"`
+		RotateProxyScoreThreshold float64 `mapstructure:"rotate_proxy_score_threshold"`
+	}
+
 	WebDriver struct {
 		Timeout       int    `mapstructure:"timeout"`
 		Headless      bool   `mapstructure:"headless"`
@@ -44,6 +49,19 @@ type Arguments struct {
 	DataSource struct {
 		UserAgents        string `mapstructure:"user_agents"`
 		UserAgentLifespan int    `mapstructure:"user_agent_lifespan"`
+
+		SpysOne struct {
+			ProxyMode       string `mapstructure:"proxy_mode"`
+			Headless        bool   `mapstructure:"headless"`
+			RefreshInterval int    `mapstructure:"refresh_interval"`
+			Retry           int    `mapstructure:"retry"`
+		}
+		HideMyName struct {
+			ProxyMode       string `mapstructure:"proxy_mode"`
+			Headless        bool   `mapstructure:"headless"`
+			RefreshInterval int    `mapstructure:"refresh_interval"`
+			Retry           int    `mapstructure:"retry"`
+		}
 	}
 
 	Database struct {
@@ -87,7 +105,15 @@ func checkConfig() {
 }
 
 func setDefaults() {
-	Args.LogLevel = "info"
+	vp.SetDefault("log_level", "info")
+	vp.SetDefault("DataSource.SpysOne.proxy_mode", "master")
+	vp.SetDefault("DataSource.SpysOne.headless", true)
+	vp.SetDefault("DataSource.SpysOne.refresh_interval", 60)
+	vp.SetDefault("DataSource.HideMyName.proxy_mode", "master")
+	vp.SetDefault("DataSource.HideMyName.headless", false)
+	vp.SetDefault("DataSource.HideMyName.refresh_interval", 60)
+
+	// Args.LogLevel = "info"
 }
 
 // ConfigFileUsed returns the file used to populate the config registry.

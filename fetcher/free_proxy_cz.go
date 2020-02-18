@@ -10,7 +10,9 @@ import (
 )
 
 //FreeProxyCZ fetches proxy server from http://free-proxy.cz
-type FreeProxyCZ struct{}
+type FreeProxyCZ struct{
+	defaultFetcherSpec
+}
 
 //UID returns the unique identifier for this spec.
 func (f FreeProxyCZ) UID() string {
@@ -38,10 +40,10 @@ func (f FreeProxyCZ) IsGBK() bool {
 	return false
 }
 
-//UseMasterProxy returns whether the fetcher needs a master proxy server
+//ProxyMode returns whether the fetcher needs a master proxy server
 //to access the free proxy list provider.
-func (f FreeProxyCZ) UseMasterProxy() bool {
-	return true
+func (f FreeProxyCZ) ProxyMode() types.ProxyMode {
+	return types.MasterProxy
 }
 
 //ListSelector returns the jQuery selector for searching the proxy server list/table.

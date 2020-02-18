@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/carusyte/roprox/conf"
 	"github.com/carusyte/roprox/types"
 	"github.com/chromedp/chromedp"
 	"github.com/pkg/errors"
@@ -13,7 +14,9 @@ import (
 )
 
 //GatherProxy fetches proxy server from http://www.gatherproxy.com
-type GatherProxy struct{}
+type GatherProxy struct{
+	defaultFetcherSpec
+}
 
 //UID returns the unique identifier for this spec.
 func (f GatherProxy) UID() string {
@@ -29,10 +32,10 @@ func (f GatherProxy) Urls() []string {
 	}
 }
 
-//UseMasterProxy returns whether the fetcher needs a master proxy server
+//ProxyMode returns whether the fetcher needs a master proxy server
 //to access the free proxy list provider.
-func (f GatherProxy) UseMasterProxy() bool {
-	return true
+func (f GatherProxy) ProxyMode() types.ProxyMode {
+	return types.MasterProxy
 }
 
 //RefreshInterval determines how often the list should be refreshed, in minutes.
@@ -76,6 +79,11 @@ func (f GatherProxy) parse(ips, ports, anon, locs []string) (ps []*types.ProxySe
 		ps = append(ps, types.NewProxyServer(f.UID(), ip, port, "http", loc))
 	}
 	return
+}
+
+//Headless for web driver
+func (f GatherProxy) Headless() bool {
+	return conf.Args.WebDriver.Headless
 }
 
 //Fetch the proxy info

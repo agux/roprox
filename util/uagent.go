@@ -238,7 +238,7 @@ func downloadFile(filepath string, url string) (err error) {
 	err = repeat.Repeat(
 		repeat.FnWithCounter(op),
 		repeat.StopOnSuccess(),
-		repeat.LimitMaxTries(conf.Args.HTTPRetry),
+		repeat.LimitMaxTries(conf.Args.Network.HTTPRetry),
 		repeat.WithDelay(
 			repeat.FullJitterBackoff(500*time.Millisecond).WithMaxDelay(10*time.Second).Set(),
 		),

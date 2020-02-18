@@ -8,7 +8,9 @@ import (
 )
 
 //ProxyListPlus fetches proxy server from https://list.proxylistplus.com
-type ProxyListPlus struct{}
+type ProxyListPlus struct{
+	defaultFetcherSpec
+}
 
 //UID returns the unique identifier for this spec.
 func (f ProxyListPlus) UID() string {
@@ -28,10 +30,10 @@ func (f ProxyListPlus) IsGBK() bool {
 	return false
 }
 
-//UseMasterProxy returns whether the fetcher needs a master proxy server
+//ProxyMode returns whether the fetcher needs a master proxy server
 //to access the free proxy list provider.
-func (f ProxyListPlus) UseMasterProxy() bool {
-	return true
+func (f ProxyListPlus) ProxyMode() types.ProxyMode {
+	return types.MasterProxy
 }
 
 //ListSelector returns the jQuery selector for searching the proxy server list/table.

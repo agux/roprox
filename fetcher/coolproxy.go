@@ -8,7 +8,9 @@ import (
 )
 
 //CoolProxy fetches proxy server from https://www.cool-proxy.net/
-type CoolProxy struct{}
+type CoolProxy struct{
+	defaultFetcherSpec
+}
 
 //UID returns the unique identifier for this spec.
 func (f CoolProxy) UID() string {
@@ -22,10 +24,10 @@ func (f CoolProxy) Urls() []string {
 	}
 }
 
-//UseMasterProxy returns whether the fetcher needs a master proxy server
+//ProxyMode returns whether the fetcher needs a master proxy server
 //to access the free proxy list provider.
-func (f CoolProxy) UseMasterProxy() bool {
-	return true
+func (f CoolProxy) ProxyMode() types.ProxyMode {
+	return types.MasterProxy
 }
 
 //ParseJSON parses JSON payload and extracts proxy information

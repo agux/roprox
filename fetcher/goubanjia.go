@@ -9,7 +9,9 @@ import (
 )
 
 //GouBanJia fetches proxy server from http://www.goubanjia.com/
-type GouBanJia struct{}
+type GouBanJia struct{
+	defaultFetcherSpec
+}
 
 //UID returns the unique identifier for this spec.
 func (f GouBanJia) UID() string {
@@ -26,10 +28,10 @@ func (f GouBanJia) IsGBK() bool {
 	return false
 }
 
-//UseMasterProxy returns whether the fetcher needs a master proxy server
+//ProxyMode returns whether the fetcher needs a master proxy server
 //to access the free proxy list provider.
-func (f GouBanJia) UseMasterProxy() bool {
-	return true
+func (f GouBanJia) ProxyMode() types.ProxyMode {
+	return types.MasterProxy
 }
 
 //ListSelector returns the jQuery selector for searching the proxy server list/table.

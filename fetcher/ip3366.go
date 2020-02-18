@@ -8,7 +8,9 @@ import (
 )
 
 //IP3366 fetches proxy server from http://www.ip3366.net
-type IP3366 struct{}
+type IP3366 struct{
+	defaultFetcherSpec
+}
 
 //UID returns the unique identifier for this spec.
 func (f IP3366) UID() string {
@@ -31,10 +33,10 @@ func (f IP3366) IsGBK() bool {
 	return true
 }
 
-//UseMasterProxy returns whether the fetcher needs a master proxy server
+//ProxyMode returns whether the fetcher needs a master proxy server
 //to access the free proxy list provider.
-func (f IP3366) UseMasterProxy() bool {
-	return false
+func (f IP3366) ProxyMode() types.ProxyMode {
+	return types.Direct
 }
 
 //ListSelector returns the jQuery selector for searching the proxy server list/table.

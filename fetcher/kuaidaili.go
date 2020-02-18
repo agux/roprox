@@ -8,7 +8,9 @@ import (
 )
 
 //KuaiDaiLi fetches proxy server from https://www.kuaidaili.com
-type KuaiDaiLi struct{}
+type KuaiDaiLi struct{
+	defaultFetcherSpec
+}
 
 //UID returns the unique identifier for this spec.
 func (f KuaiDaiLi) UID() string {
@@ -31,10 +33,10 @@ func (f KuaiDaiLi) IsGBK() bool {
 	return false
 }
 
-//UseMasterProxy returns whether the fetcher needs a master proxy server
+//ProxyMode returns whether the fetcher needs a master proxy server
 //to access the free proxy list provider.
-func (f KuaiDaiLi) UseMasterProxy() bool {
-	return false
+func (f KuaiDaiLi) ProxyMode() types.ProxyMode {
+	return types.Direct
 }
 
 //ListSelector returns the jQuery selector for searching the proxy server list/table.

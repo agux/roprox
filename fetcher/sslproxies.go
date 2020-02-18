@@ -9,7 +9,9 @@ import (
 )
 
 //SSLProxies fetches proxy server from https://www.sslproxies.org/
-type SSLProxies struct{}
+type SSLProxies struct{
+	defaultFetcherSpec
+}
 
 //UID returns the unique identifier for this spec.
 func (f SSLProxies) UID() string {
@@ -26,10 +28,10 @@ func (f SSLProxies) IsGBK() bool {
 	return false
 }
 
-//UseMasterProxy returns whether the fetcher needs a master proxy server
+//ProxyMode returns whether the fetcher needs a master proxy server
 //to access the free proxy list provider.
-func (f SSLProxies) UseMasterProxy() bool {
-	return true
+func (f SSLProxies) ProxyMode() types.ProxyMode {
+	return types.MasterProxy
 }
 
 //ListSelector returns the jQuery selector for searching the proxy server list/table.

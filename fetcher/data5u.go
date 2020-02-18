@@ -8,7 +8,9 @@ import (
 )
 
 //Data5u fetches proxy server from http://www.data5u.com
-type Data5u struct{}
+type Data5u struct{
+	defaultFetcherSpec
+}
 
 //UID returns the unique identifier for this spec.
 func (f Data5u) UID() string {
@@ -27,10 +29,10 @@ func (f Data5u) IsGBK() bool {
 	return false
 }
 
-//UseMasterProxy returns whether the fetcher needs a master proxy server
+//ProxyMode returns whether the fetcher needs a master proxy server
 //to access the free proxy list provider.
-func (f Data5u) UseMasterProxy() bool {
-	return false
+func (f Data5u) ProxyMode() types.ProxyMode {
+	return types.Direct
 }
 
 //ListSelector returns the jQuery selector for searching the proxy server list/table.

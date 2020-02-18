@@ -46,7 +46,7 @@ func TestDynamicSpysOne(t *testing.T) {
 		chromedp.ProxyServer("socks5://localhost:1080"),
 	)
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(conf.Args.HTTPTimeOut)*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(conf.Args.Network.HTTPTimeout)*time.Second)
 	defer cancel()
 
 	ctx, cancel = chromedp.NewExecAllocator(ctx, o...)

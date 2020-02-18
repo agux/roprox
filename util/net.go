@@ -2,6 +2,7 @@ package util
 
 import (
 	"fmt"
+	"math/rand"
 	"net"
 	"net/http"
 	"net/url"
@@ -11,6 +12,9 @@ import (
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/carusyte/roprox/conf"
+	"github.com/carusyte/roprox/data"
+	"github.com/carusyte/roprox/types"
+	"github.com/pkg/errors"
 	"golang.org/x/net/proxy"
 )
 
@@ -107,4 +111,25 @@ func ValidateProxy(stype, host, port string) bool {
 	}
 	log.Warnf("%s failed to identify target on validation site", addr)
 	return false
+}
+
+//PickProxy randomly chooses a proxy from database.
+func PickProxy() (proxy *types.ProxyServer, e error) {
+	proxyList := make([]*types.ProxyServer, 0, 64)
+	query := `
+		SELECT 
+			*
+		FROM
+			proxy_list
+		WHERE
+			score >= ?`
+	_, e = data.DB.Select(&proxyList, query, conf.Args.Network.RotateProxyScoreThreshold)
+	if e != nil {
+		log.Println("failed to query proxy server from database", e)
+		return proxy, errors.WithStack(e)
+	}
+	log.Infof("successfully fetched %d free proxy servers from database.", len(proxyList))
+	str := strings.Split(conf.Args.Network.MasterProxyAddr, ":")
+	proxyList = append(proxyList, types.NewProxyServer("config", str[0], str[1], "socks5", ""))
+	return proxyList[rand.Intn(len(proxyList))], nil
 }

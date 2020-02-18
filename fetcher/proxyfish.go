@@ -11,6 +11,7 @@ import (
 
 //ProxyFish fetches proxy info from proxyfish.com
 type ProxyFish struct {
+	defaultFetcherSpec
 }
 
 //UID returns the unique identifier for this spec.
@@ -77,10 +78,10 @@ func (p ProxyFish) ParseJSON(payload []byte) (ps []*types.ProxyServer) {
 	return
 }
 
-//UseMasterProxy returns whether the fetcher needs a master proxy server
+//ProxyMode returns whether the fetcher needs a master proxy server
 //to access the free proxy list provider.
-func (p ProxyFish) UseMasterProxy() bool {
-	return true
+func (p ProxyFish) ProxyMode() types.ProxyMode {
+	return types.MasterProxy
 }
 
 //RefreshInterval determines how often the list should be refreshed, in minutes.

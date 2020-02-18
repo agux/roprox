@@ -8,7 +8,9 @@ import (
 )
 
 //Z66IP fetches proxy server from http://www.66ip.cn
-type Z66IP struct{}
+type Z66IP struct{
+	defaultFetcherSpec
+}
 
 //UID returns the unique identifier for this spec.
 func (f Z66IP) UID() string {
@@ -32,10 +34,10 @@ func (f Z66IP) IsGBK() bool {
 	return true
 }
 
-//UseMasterProxy returns whether the fetcher needs a master proxy server
+//ProxyMode returns whether the fetcher needs a master proxy server
 //to access the free proxy list provider.
-func (f Z66IP) UseMasterProxy() bool {
-	return false
+func (f Z66IP) ProxyMode() types.ProxyMode {
+	return types.Direct
 }
 
 //ListSelector returns the jQuery selector for searching the proxy server list/table.

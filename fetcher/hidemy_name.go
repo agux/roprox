@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/carusyte/roprox/conf"
 	"github.com/carusyte/roprox/types"
 	"github.com/chromedp/chromedp"
 	"github.com/pkg/errors"
@@ -20,6 +21,10 @@ func (f HideMyName) UID() string {
 	return "HideMyName"
 }
 
+func (f HideMyName) Retry() int {
+	return conf.Args.WebDriver.MaxRetry
+}
+
 //Urls return the server urls that provide the free proxy server lists.
 func (f HideMyName) Urls() []string {
 	return []string{
@@ -27,15 +32,15 @@ func (f HideMyName) Urls() []string {
 	}
 }
 
-//UseMasterProxy returns whether the fetcher needs a master proxy server
+//ProxyMode returns whether the fetcher needs a master proxy server
 //to access the free proxy list provider.
-func (f HideMyName) UseMasterProxy() bool {
-	return true
+func (f HideMyName) ProxyMode() types.ProxyMode {
+	return types.ProxyMode(conf.Args.DataSource.HideMyName.ProxyMode)
 }
 
 //RefreshInterval determines how often the list should be refreshed, in minutes.
 func (f HideMyName) RefreshInterval() int {
-	return 60
+	return conf.Args.DataSource.HideMyName.RefreshInterval
 }
 
 func (f HideMyName) extract(ctx context.Context) (i, p, a, t, l []string, e error) {
@@ -90,6 +95,11 @@ func (f HideMyName) parse(ips, ports, anon, ts, locs []string) (ps []*types.Prox
 		ps = append(ps, types.NewProxyServer(f.UID(), ip, port, t, loc))
 	}
 	return
+}
+
+//Headless for web driver
+func (f HideMyName) Headless() bool {
+	return conf.Args.DataSource.HideMyName.Headless
 }
 
 //Fetch the proxy info

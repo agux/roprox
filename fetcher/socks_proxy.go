@@ -8,7 +8,9 @@ import (
 )
 
 //SocksProxy fetches proxy server from https://www.socks-proxy.net
-type SocksProxy struct{}
+type SocksProxy struct{
+	defaultFetcherSpec
+}
 
 //UID returns the unique identifier for this spec.
 func (f SocksProxy) UID() string {
@@ -28,10 +30,10 @@ func (f SocksProxy) IsGBK() bool {
 	return false
 }
 
-//UseMasterProxy returns whether the fetcher needs a master proxy server
+//ProxyMode returns whether the fetcher needs a master proxy server
 //to access the free proxy list provider.
-func (f SocksProxy) UseMasterProxy() bool {
-	return true
+func (f SocksProxy) ProxyMode() types.ProxyMode {
+	return types.MasterProxy
 }
 
 //ListSelector returns the jQuery selector for searching the proxy server list/table.

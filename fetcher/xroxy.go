@@ -8,7 +8,9 @@ import (
 )
 
 //Xroxy fetches proxy server from https://www.xroxy.com
-type Xroxy struct{}
+type Xroxy struct{
+	defaultFetcherSpec
+}
 
 //UID returns the unique identifier for this spec.
 func (f Xroxy) UID() string {
@@ -34,10 +36,10 @@ func (f Xroxy) IsGBK() bool {
 	return false
 }
 
-//UseMasterProxy returns whether the fetcher needs a master proxy server
+//ProxyMode returns whether the fetcher needs a master proxy server
 //to access the free proxy list provider.
-func (f Xroxy) UseMasterProxy() bool {
-	return true
+func (f Xroxy) ProxyMode() types.ProxyMode {
+	return types.MasterProxy
 }
 
 //ListSelector returns the jQuery selector for searching the proxy server list/table.
