@@ -231,3 +231,31 @@ func captureScreen(ctx context.Context, filename string, quality int) (e error) 
 
 	return
 }
+
+// waitPageLoaded blocks until a target receives a Page.loadEventFired.
+func waitPageLoaded(ctx context.Context) error {
+	// TODO: this function is inherently racy, as we don't run ListenTarget
+	// until after the navigate action is fired. For example, adding
+	// time.Sleep(time.Second) at the top of this body makes most tests hang
+	// forever, as they miss the load event.
+	//
+	// However, setting up the listener before firing the navigate action is
+	// also racy, as we might get a load event from a previous navigate.
+	//
+	// For now, the second race seems much more common in real scenarios, so
+	// keep the first approach. Is there a better way to deal with this?
+	ch := make(chan struct{})
+	lctx, cancel := context.WithCancel(ctx)
+	chromedp.ListenTarget(lctx, func(ev interface{}) {
+		if _, ok := ev.(*page.EventLoadEventFired); ok {
+			cancel()
+			close(ch)
+		}
+	})
+	select {
+	case <-ch:
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+}

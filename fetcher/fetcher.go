@@ -41,14 +41,19 @@ func fetchDynamicHTML(urlIdx int, url string, chpx chan<- *t.ProxyServer, fspec 
 	if conf.Args.WebDriver.NoImage {
 		o = append(o, chromedp.Flag("blink-settings", "imagesEnabled=false"))
 	}
-	for _, opt := range chromedp.DefaultExecAllocatorOptions {
-		if reflect.ValueOf(chromedp.Headless).Pointer() == reflect.ValueOf(opt).Pointer() &&
-			!conf.Args.WebDriver.Headless {
-			log.Debug("ignored headless mode")
-			continue
-		}
-		o = append(o, opt)
+	if conf.Args.WebDriver.Headless {
+		o = append(o, chromedp.Headless)
 	}
+	o = append(o, chromedp.NoFirstRun, chromedp.NoDefaultBrowserCheck)
+
+	// for _, opt := range chromedp.DefaultExecAllocatorOptions {
+	// 	if reflect.ValueOf(chromedp.Headless).Pointer() == reflect.ValueOf(opt).Pointer() &&
+	// 		!conf.Args.WebDriver.Headless {
+	// 		log.Debug("ignored headless mode")
+	// 		continue
+	// 	}
+	// 	o = append(o, opt)
+	// }
 
 	psmap := make(map[string]*t.ProxyServer)
 	op := func(rc int) (e error) {
@@ -71,6 +76,11 @@ func fetchDynamicHTML(urlIdx int, url string, chpx chan<- *t.ProxyServer, fspec 
 		ctx, c1 = context.WithTimeout(context.Background(), time.Duration(conf.Args.WebDriver.Timeout)*time.Second)
 		ctx, c2 = chromedp.NewExecAllocator(ctx, o...)
 		ctx, c3 = chromedp.NewContext(ctx)
+
+		//clear browser cache
+		// if e = network.ClearBrowserCache().Do(ctx); e != nil {
+		// 	log.Errorf("#%d %s failed to clear browser cache: %+v", rc, url, e)
+		// }
 
 		// navigate
 		if e = chromedp.Run(ctx, chromedp.Navigate(url)); e != nil {
