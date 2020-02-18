@@ -82,5 +82,5 @@ func (f CoolProxy) ParseJSON(payload []byte) (ps []*types.ProxyServer) {
 
 //RefreshInterval determines how often the list should be refreshed, in minutes.
 func (f CoolProxy) RefreshInterval() int {
-	return 10
+	return 30
 }

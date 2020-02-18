@@ -85,7 +85,7 @@ func (p ProxyFish) UseMasterProxy() bool {
 
 //RefreshInterval determines how often the list should be refreshed, in minutes.
 func (p ProxyFish) RefreshInterval() int {
-	return 10
+	return 30
 }
 
 type proxyFishJSON struct {

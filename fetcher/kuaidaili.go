@@ -46,7 +46,7 @@ func (f KuaiDaiLi) ListSelector() []string {
 
 //RefreshInterval determines how often the list should be refreshed, in minutes.
 func (f KuaiDaiLi) RefreshInterval() int {
-	return 10
+	return 30
 }
 
 //ScanItem process each item found in the table determined by ListSelector().
