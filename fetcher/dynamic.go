@@ -148,14 +148,11 @@ func dumpHTML(ctx context.Context, filename string) (e error) {
 	return
 }
 
-func captureScreen(ctx context.Context, filename string, quality int) (e error) {
-	buf := make([]byte, 0, 1024)
-	bufptr := &buf
-	// capture entire browser viewport, returning png with quality=90
-	if e = chromedp.Run(ctx,
-		chromedp.ActionFunc(func(ctx context.Context) error {
+func forceViewportEmulation(ctx context.Context) (contentSize *dom.Rect, e error) {
+	e = chromedp.Run(ctx,
+		chromedp.ActionFunc(func(ctx context.Context) (err error) {
 			// get layout metrics
-			_, _, contentSize, err := page.GetLayoutMetrics().Do(ctx)
+			_, _, contentSize, err = page.GetLayoutMetrics().Do(ctx)
 			if err != nil {
 				return errors.Wrapf(err, "failed to get layout metrics")
 			}
@@ -173,6 +170,23 @@ func captureScreen(ctx context.Context, filename string, quality int) (e error) 
 				return errors.Wrapf(err, "failed to force viewport emulation")
 			}
 
+			return nil
+		}),
+	)
+	return
+}
+
+func captureScreen(ctx context.Context, filename string, quality int) (e error) {
+	var contentSize *dom.Rect
+	if contentSize, e = forceViewportEmulation(ctx); e != nil{
+		return	
+	}
+
+	buf := make([]byte, 0, 1024)
+	bufptr := &buf
+	// capture entire browser viewport, returning png with quality=90
+	if e = chromedp.Run(ctx,
+		chromedp.ActionFunc(func(ctx context.Context) (err error) {
 			// capture screenshot
 			*bufptr, err = page.CaptureScreenshot().
 				WithQuality(int64(quality)).
@@ -201,33 +215,6 @@ func captureScreen(ctx context.Context, filename string, quality int) (e error) 
 		0644); e != nil {
 		return errors.Wrapf(e, "unable to save image to %s", imgPath)
 	}
-
-	// if e = chromedp.Run(ctx,
-	// 	chromedp.CaptureScreenshot(&imgByte),
-	// ); e != nil {
-	// 	return errors.Wrapf(e, "failed to capture screen")
-	// }
-
-	// img, _, e := image.Decode(bytes.NewReader(imgByte))
-	// if e != nil {
-	// 	return errors.Wrapf(e, "failed to decode image bytes")
-	// }
-
-	// imgPath := filepath.Join(
-	// 	conf.Args.WebDriver.ScreenshotFolder,
-	// 	fmt.Sprintf("%s_%s.jpeg", filename, time.Now().Format("20060102_150405")),
-	// )
-	// out, e := os.Create(imgPath)
-	// defer out.Close()
-	// if e != nil {
-	// 	return errors.Wrapf(e, "failed to create file at %s", imgPath)
-	// }
-
-	// if e = jpeg.Encode(out, img, &jpeg.Options{
-	// 	Quality: quality,
-	// }); e != nil {
-	// 	return errors.Wrapf(e, "unable to encode screenshot as jpeg")
-	// }
 
 	return
 }

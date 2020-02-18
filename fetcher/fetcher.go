@@ -37,6 +37,10 @@ func fetchDynamicHTML(urlIdx int, url string, chpx chan<- *t.ProxyServer, fspec 
 	var o []chromedp.ExecAllocatorOption
 	if useMasterProxy {
 		o = append(o, chromedp.ProxyServer("socks5://localhost:1080"))
+		if ua, e := util.PickUserAgent(); e != nil {
+			log.Fatalf("failed to pick user agents from the pool: %+v", e)
+			o = append(o, chromedp.UserAgent(ua))
+		}
 	}
 	if conf.Args.WebDriver.NoImage {
 		o = append(o, chromedp.Flag("blink-settings", "imagesEnabled=false"))

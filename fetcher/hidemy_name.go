@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/carusyte/roprox/types"
 	"github.com/chromedp/chromedp"
@@ -74,7 +75,7 @@ func (f HideMyName) parse(ips, ports, anon, ts, locs []string) (ps []*types.Prox
 			continue
 		}
 
-		if strings.Contains(ts[i], "SOCKS4") {
+		if strings.EqualFold(ts[i], "SOCKS4") {
 			return
 		}
 
@@ -93,6 +94,12 @@ func (f HideMyName) parse(ips, ports, anon, ts, locs []string) (ps []*types.Prox
 
 //Fetch the proxy info
 func (f HideMyName) Fetch(ctx context.Context, urlIdx int, url string) (ps []*types.ProxyServer, e error) {
+	// var rect *dom.Rect
+	// if rect, e = forceViewportEmulation(ctx); e != nil {
+	// 	return
+	// }
+	// log.Debugf("page rect: %+v", *rect)
+
 	if e = chromedp.Run(ctx,
 		chromedp.WaitNotPresent(`div.attribution`),
 	); e != nil {
@@ -101,6 +108,9 @@ func (f HideMyName) Fetch(ctx context.Context, urlIdx int, url string) (ps []*ty
 	}
 
 	log.Debug("div.attribution exited")
+
+	// dumpHTML(ctx, f.UID())
+	// captureScreen(ctx, f.UID(), 90)
 
 	if e = chromedp.Run(ctx,
 		chromedp.WaitReady(`table.proxy__t`),
@@ -117,11 +127,15 @@ func (f HideMyName) Fetch(ctx context.Context, urlIdx int, url string) (ps []*ty
 		e = errors.Wrap(e, "unable to extract proxy info")
 		log.Error(e)
 	} else {
+		log.Tracef("hosts: %+q", ips)
+		log.Tracef("ports: %+q", ports)
+		log.Tracef("anon: %+q", anon)
+		log.Tracef("types: %+q", ts)
+		log.Tracef("locs: %+q", locs)
 		newPS := f.parse(ips, ports, anon, ts, locs)
+		log.Debugf("%d proxy info extracted at first page", len(newPS))
 		ps = append(ps, newPS...)
 	}
-
-	log.Debug("proxy info extracted")
 
 	//page page num
 	var numPage int
@@ -133,10 +147,10 @@ func (f HideMyName) Fetch(ctx context.Context, urlIdx int, url string) (ps []*ty
 		log.Error(e)
 		return ps, repeat.HintStop(e)
 	}
-	//subtracts 2 arrows and currrent page
-	numPage -= 3
+	//subtracts 1 arrow
+	numPage--
 
-	if numPage <= 1 {
+	if numPage < 2 {
 		return
 	} else if numPage > 10 {
 		numPage = 10
@@ -144,11 +158,14 @@ func (f HideMyName) Fetch(ctx context.Context, urlIdx int, url string) (ps []*ty
 
 	log.Debugf("#pages: %d", numPage)
 
-	for i := 0; i < numPage; i++ {
+	st := time.Millisecond * 2000
+	for i := 1; i < numPage; i++ {
 
 		log.Debugf("flipping to page #%d", i+1)
 
 		if e = chromedp.Run(ctx,
+			chromedp.ScrollIntoView(`li.arrow__right`),
+			chromedp.SetJavascriptAttribute(`li.arrow__right > a`, "text", "Click Me"),
 			chromedp.Click(`li.arrow__right > a`),
 			chromedp.WaitReady(fmt.Sprintf(`//li[@class="is-active" and ./a/text()='%d']`, i+1)),
 		); e != nil {
@@ -163,12 +180,14 @@ func (f HideMyName) Fetch(ctx context.Context, urlIdx int, url string) (ps []*ty
 		// 	return ps, repeat.HintStop(e)
 		// }
 
+		time.Sleep(st)
 		if ips, ports, anon, ts, locs, e = f.extract(ctx); e != nil {
 			e = errors.Wrapf(e, "unable to extract proxy info at page #%d", i+1)
 			log.Error(e)
 			continue
 		}
 		newPS := f.parse(ips, ports, anon, ts, locs)
+		log.Debugf("%d proxy info extracted at page #%d", len(newPS), i+1)
 		ps = append(ps, newPS...)
 	}
 
