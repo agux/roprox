@@ -49,9 +49,18 @@ func fetchDynamicHTML(urlIdx int, url string, chpx chan<- *t.ProxyServer, fspec 
 			log.Fatalf("%s unable to pick rotate proxy: %+v", fspec.UID(), e)
 			return
 		}
-		//FIXME need a way to quickly retry when using rotate proxy
 		p := fmt.Sprintf("%s://%s:%s", rpx.Type, rpx.Host, rpx.Port)
 		log.Debugf("using proxy: %s", p)
+		o = append(o, chromedp.ProxyServer(p))
+	case types.RotateGlobalProxy:
+		var rpx *types.ProxyServer
+		var e error
+		if rpx, e = util.PickGlobalProxy(); e != nil {
+			log.Fatalf("%s unable to pick global rotate proxy: %+v", fspec.UID(), e)
+			return
+		}
+		p := fmt.Sprintf("%s://%s:%s", rpx.Type, rpx.Host, rpx.Port)
+		log.Debugf("using global proxy: %s", p)
 		o = append(o, chromedp.ProxyServer(p))
 	}
 	if types.Direct != proxyMode {
@@ -82,8 +91,8 @@ func fetchDynamicHTML(urlIdx int, url string, chpx chan<- *t.ProxyServer, fspec 
 	psmap := make(map[string]*t.ProxyServer)
 	op := func(rc int) (e error) {
 		var (
-			ctx        context.Context
-			c1, c2, c3 context.CancelFunc
+			ctx, ctxNav        context.Context
+			c1, c2, c3, cNav context.CancelFunc
 		)
 		defer func() {
 			if c1 != nil {
@@ -94,6 +103,9 @@ func fetchDynamicHTML(urlIdx int, url string, chpx chan<- *t.ProxyServer, fspec 
 			}
 			if c3 != nil {
 				c3()
+			}
+			if cNav != nil{
+				cNav()
 			}
 		}()
 		// create context
@@ -107,7 +119,9 @@ func fetchDynamicHTML(urlIdx int, url string, chpx chan<- *t.ProxyServer, fspec 
 		// }
 
 		// navigate
-		if e = chromedp.Run(ctx, chromedp.Navigate(url)); e != nil {
+		ctxNav, cNav = context.WithTimeout(ctx, time.Duration(df.HomePageTimeout())*time.Second)
+		if e = chromedp.Run(ctxNav, chromedp.Navigate(url)); e != nil {
+			//TODO maybe it will not timeout when using a bad proxy, and shows chrome error page instead
 			e = errors.Wrapf(e, "#%d failed to run webdriver for %+s", rc, url)
 			log.Error(e)
 			return repeat.HintTemporary(e)

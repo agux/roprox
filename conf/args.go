@@ -22,6 +22,10 @@ type Arguments struct {
 	ProbeSize              int     `mapstructure:"probe_size"`
 	ProbeInterval          int     `mapstructure:"probe_interval"`
 	ProbeTimeout           int     `mapstructure:"probe_timeout"`
+	GlobalProbeSize        int     `mapstructure:"global_probe_size"`
+	GlobalProbeInterval    int     `mapstructure:"global_probe_interval"`
+	GlobalProbeTimeout     int     `mapstructure:"global_probe_timeout"`
+	GlobalProbeRetry       int     `mapstructure:"global_probe_retry"`
 	EvictionTimeout        int     `mapstructure:"eviction_timeout"`
 	EvictionInterval       int     `mapstructure:"eviction_interval"`
 	EvictionScoreThreshold float32 `mapstructure:"eviction_score_threshold"`
@@ -31,11 +35,12 @@ type Arguments struct {
 	}
 
 	Network struct {
-		MasterProxyAddr           string  `mapstructure:"master_proxy_addr"`
-		DefaultUserAgent          string  `mapstructure:"default_user_agent"`
-		HTTPTimeout               int     `mapstructure:"http_timeout"`
-		HTTPRetry                 int     `mapstructure:"http_retry"`
-		RotateProxyScoreThreshold float64 `mapstructure:"rotate_proxy_score_threshold"`
+		MasterProxyAddr                 string  `mapstructure:"master_proxy_addr"`
+		DefaultUserAgent                string  `mapstructure:"default_user_agent"`
+		HTTPTimeout                     int     `mapstructure:"http_timeout"`
+		HTTPRetry                       int     `mapstructure:"http_retry"`
+		RotateProxyScoreThreshold       float64 `mapstructure:"rotate_proxy_score_threshold"`
+		RotateProxyGlobalScoreThreshold float64 `mapstructure:"rotate_proxy_global_score_threshold"`
 	}
 
 	WebDriver struct {

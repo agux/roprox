@@ -17,6 +17,7 @@ import (
 //ProxyDB fetches proxy server from http://proxydb.net/
 type ProxyDB struct {
 	defaultFetcherSpec
+	defaultDynamicHTMLFetcher
 }
 
 //FIXME: protected by g-recaptcha

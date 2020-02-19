@@ -28,8 +28,8 @@ func DomainOf(url string) (domain string) {
 }
 
 //ValidateProxy checks the status of remote listening port, and further checks if it's a valid proxy server
-func ValidateProxy(stype, host, port string) bool {
-	timeout := time.Second * time.Duration(conf.Args.ProbeTimeout)
+func ValidateProxy(stype, host, port, link, targetID string, probeTimeout int) bool {
+	timeout := time.Second * time.Duration(probeTimeout)
 	addr := net.JoinHostPort(host, port)
 	conn, err := net.DialTimeout("tcp", addr, timeout)
 	defer func() {
@@ -45,8 +45,6 @@ func ValidateProxy(stype, host, port string) bool {
 		log.Warnf("%s timed out", addr)
 		return false
 	}
-
-	link := `http://www.baidu.com`
 
 	var client *http.Client
 	if strings.EqualFold("socks5", stype) {
@@ -81,14 +79,13 @@ func ValidateProxy(stype, host, port string) bool {
 	req.Header.Set("Accept-Language", "en-US,en;q=0.9,zh-CN;q=0.8,zh;q=0.7,zh-TW;q=0.6")
 	req.Header.Set("Cache-Control", "no-cache")
 	req.Header.Set("Connection", "close")
-	req.Header.Set("Host", "www.baidu.com")
+	req.Header.Set("Host", link)
 	req.Header.Set("Pragma", "no-cache")
 	req.Header.Set("Upgrade-Insecure-Requests", "1")
 	uagent, e := PickUserAgent()
 	if e != nil {
 		log.Errorln("failed to acquire rotate user agent, using default value", e)
-		uagent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_1) " +
-			"AppleWebKit/537.36 (KHTML, like Gecko) Chrome/62.0.3202.94 Safari/537.36"
+		uagent = conf.Args.Network.DefaultUserAgent
 	}
 	req.Header.Set("User-Agent", uagent)
 
@@ -104,7 +101,7 @@ func ValidateProxy(stype, host, port string) bool {
 		log.Warnf("%s failed to read validation site's response body: %+v", addr, e)
 		return false
 	}
-	size := doc.Find("#wrapper").Size()
+	size := doc.Find(targetID).Size()
 	if size > 0 {
 		log.Debugf("%s success", addr)
 		return true
@@ -129,6 +126,27 @@ func PickProxy() (proxy *types.ProxyServer, e error) {
 		return proxy, errors.WithStack(e)
 	}
 	log.Infof("successfully fetched %d free proxy servers from database.", len(proxyList))
+	str := strings.Split(conf.Args.Network.MasterProxyAddr, ":")
+	proxyList = append(proxyList, types.NewProxyServer("config", str[0], str[1], "socks5", ""))
+	return proxyList[rand.Intn(len(proxyList))], nil
+}
+
+//PickGlobalProxy randomly chooses a global proxy from database.
+func PickGlobalProxy() (proxy *types.ProxyServer, e error) {
+	proxyList := make([]*types.ProxyServer, 0, 64)
+	query := `
+		SELECT 
+			*
+		FROM
+			proxy_list
+		WHERE
+			score_g >= ?`
+	_, e = data.DB.Select(&proxyList, query, conf.Args.Network.RotateProxyGlobalScoreThreshold)
+	if e != nil {
+		log.Println("failed to query global proxy server from database", e)
+		return proxy, errors.WithStack(e)
+	}
+	log.Infof("successfully fetched %d free global proxy servers from database.", len(proxyList))
 	str := strings.Split(conf.Args.Network.MasterProxyAddr, ":")
 	proxyList = append(proxyList, types.NewProxyServer("config", str[0], str[1], "socks5", ""))
 	return proxyList[rand.Intn(len(proxyList))], nil

@@ -15,6 +15,7 @@ import (
 //SpysOne fetches proxy server from http://spys.one
 type SpysOne struct {
 	URLs []string
+	defaultDynamicHTMLFetcher
 }
 
 //UID returns the unique identifier for this spec.

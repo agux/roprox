@@ -17,9 +17,10 @@ type ContentType string
 type ProxyMode string
 
 const (
-	MasterProxy ProxyMode = "master"
-	RotateProxy ProxyMode = "rotate"
-	Direct      ProxyMode = "direct"
+	MasterProxy       ProxyMode = "master"
+	RotateProxy       ProxyMode = "rotate"
+	RotateGlobalProxy ProxyMode = "rotate_global"
+	Direct            ProxyMode = "direct"
 )
 
 const (
@@ -44,8 +45,12 @@ type ProxyServer struct {
 	Suc         int
 	Fail        int
 	Score       float64
-	LastCheck   string `db:"last_check"`
-	LastScanned string `db:"last_scanned"`
+	StatusG     string  `db:"status_g"`
+	SucG        int     `db:"suc_g`
+	FailG       int     `db:"fail_g"`
+	ScoreG      float64 `db:"score_g"`
+	LastCheck   string  `db:"last_check"`
+	LastScanned string  `db:"last_scanned"`
 }
 
 func (p *ProxyServer) String() string {
@@ -65,7 +70,9 @@ func NewProxyServer(source, host, port, ptype, loc string) *ProxyServer {
 		Type:        ptype,
 		Loc:         loc,
 		Status:      UNK,
+		StatusG:     UNK,
 		Fail:        0,
+		FailG:       0,
 		LastCheck:   time.Now().Format(DateTimeFormat),
 		LastScanned: time.Now().Format(DateTimeFormat),
 	}
@@ -110,6 +117,8 @@ type DynamicHTMLFetcher interface {
 	Fetch(ctx context.Context, urlIdx int, url string) (ps []*ProxyServer, e error)
 	//Headless specifies whether the web driver should be run in headless mode
 	Headless() bool
+	//HomePageTimeout specifies how many seconds to wait before home page navigation is timed out
+	HomePageTimeout() int
 }
 
 //UserAgent represents user_agent table structure.

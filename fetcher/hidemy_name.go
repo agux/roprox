@@ -14,7 +14,9 @@ import (
 )
 
 //HideMyName fetches proxy info from this web
-type HideMyName struct{}
+type HideMyName struct{
+	defaultDynamicHTMLFetcher
+}
 
 //UID returns the unique identifier for this spec.
 func (f HideMyName) UID() string {

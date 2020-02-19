@@ -16,6 +16,7 @@ import (
 //GatherProxy fetches proxy server from http://www.gatherproxy.com
 type GatherProxy struct{
 	defaultFetcherSpec
+	defaultDynamicHTMLFetcher
 }
 
 //UID returns the unique identifier for this spec.
