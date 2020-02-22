@@ -178,8 +178,8 @@ func forceViewportEmulation(ctx context.Context) (contentSize *dom.Rect, e error
 
 func captureScreen(ctx context.Context, filename string, quality int) (e error) {
 	var contentSize *dom.Rect
-	if contentSize, e = forceViewportEmulation(ctx); e != nil{
-		return	
+	if contentSize, e = forceViewportEmulation(ctx); e != nil {
+		return
 	}
 
 	buf := make([]byte, 0, 1024)

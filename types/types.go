@@ -46,7 +46,7 @@ type ProxyServer struct {
 	Fail        int
 	Score       float64
 	StatusG     string  `db:"status_g"`
-	SucG        int     `db:"suc_g`
+	SucG        int     `db:"suc_g"`
 	FailG       int     `db:"fail_g"`
 	ScoreG      float64 `db:"score_g"`
 	LastCheck   string  `db:"last_check"`
@@ -114,7 +114,7 @@ type StaticHTMLFetcher interface {
 //DynamicHTMLFetcher fetches target url by using web driver
 type DynamicHTMLFetcher interface {
 	//Fetch the proxy info
-	Fetch(ctx context.Context, urlIdx int, url string) (ps []*ProxyServer, e error)
+	Fetch(parent context.Context, urlIdx int, url string) (ps []*ProxyServer, e error)
 	//Headless specifies whether the web driver should be run in headless mode
 	Headless() bool
 	//HomePageTimeout specifies how many seconds to wait before home page navigation is timed out

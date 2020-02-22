@@ -20,7 +20,8 @@ func TestFetch_SpysOne(t *testing.T) {
 			log.Tracef("extracted proxy: %+v", px)
 		}
 	}()
-	gp := &SpysOne{}
+	gp := &SpysOne{[]string{`http://spys.one/free-proxy-list/CN/`}}
+	// gp := &SpysOne{}
 	for i, url := range gp.Urls() {
 		fetchFor(i, url, chpx, gp)
 	}
@@ -30,7 +31,7 @@ func TestSelect_SpysOne(t *testing.T) {
 	log.Infof("config file used: %s", conf.ConfigFileUsed())
 	chpx := make(chan *types.ProxyServer, 100)
 	go testServer(":8544")
-	gp := &SpysOne{[]string{
+	gp := &SpysOne{URLs: []string{
 		"http://localhost:8544",
 	}}
 	for i, url := range gp.Urls() {

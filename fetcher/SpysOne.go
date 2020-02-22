@@ -15,7 +15,10 @@ import (
 //SpysOne fetches proxy server from http://spys.one
 type SpysOne struct {
 	URLs []string
-	defaultDynamicHTMLFetcher
+}
+
+func (f SpysOne) HomePageTimeout() int {
+	return 20
 }
 
 //UID returns the unique identifier for this spec.
@@ -23,7 +26,7 @@ func (f SpysOne) UID() string {
 	return "SpysOne"
 }
 
-func (f SpysOne) Retry() int{
+func (f SpysOne) Retry() int {
 	return conf.Args.DataSource.SpysOne.Retry
 }
 
@@ -56,8 +59,55 @@ func (f SpysOne) Headless() bool {
 	return conf.Args.DataSource.SpysOne.Headless
 }
 
+//check if it shows the ban page
+func (f SpysOne) isBanned(parent context.Context) (b bool, e error) {
+	ctx, c := context.WithTimeout(parent, time.Second*5)
+	defer c()
+	var msg string
+	msgSel := `body > table > tbody > tr > td > table > tbody > tr:nth-child(2) > td`
+	if e = chromedp.Run(ctx,
+		chromedp.WaitReady(msgSel),
+		chromedp.TextContent(msgSel, &msg),
+	); e != nil {
+		return b, errors.Wrapf(e, "failed to query node with selector '%s' for ban page", msgSel)
+	}
+	b = strings.EqualFold(
+		strings.TrimSpace(msg),
+		`This IP address has been blocked for excessive page loads.`)
+	return
+}
+
+func (f SpysOne) fetchProxyForBot(parent context.Context) (ps []*types.ProxyServer, e error) {
+	//TODO implements me
+	log.Debugf("%s fetching proxy info from page for bot", f.UID())
+	// if e = chromedp.Run(parent,
+
+	// )
+	return
+}
+
 //Fetch the proxy info.
-func (f SpysOne) Fetch(ctx context.Context, urlIdx int, url string) (ps []*types.ProxyServer, e error) {
+func (f SpysOne) Fetch(parent context.Context, urlIdx int, url string) (ps []*types.ProxyServer, e error) {
+
+	//check if #xpp is present (valid). otherwise the source IP has been banned
+	ctx, c := context.WithTimeout(parent, time.Second*10)
+	defer c()
+	if e = chromedp.Run(ctx,
+		chromedp.WaitVisible(`#xpp`),
+	); e != nil {
+		e = errors.Wrapf(e, "%s #xpp cannot be detected", f.UID())
+		log.Error(e)
+		//check if banned page is shown
+		if b, e := f.isBanned(parent); e != nil {
+			e = errors.Wrapf(e, "failed to check ban page")
+			return ps, e
+		} else if b {
+			return f.fetchProxyForBot(parent)
+		}
+		//unknown state
+		return ps, e
+	}
+
 	ipPort := make([]string, 0, 4)
 	ts := make([]string, 0, 4)
 	anon := make([]string, 0, 4)
@@ -66,7 +116,7 @@ func (f SpysOne) Fetch(ctx context.Context, urlIdx int, url string) (ps []*types
 	var str string
 
 	if e = chromedp.Run(ctx,
-		chromedp.WaitVisible(`#xpp`),
+		// chromedp.WaitVisible(`#xpp`),
 		chromedp.JavascriptAttribute(`#xpp`, `length`, &xppLen),
 		chromedp.TextContent(`#xpp option:last-child`, &str),
 		chromedp.SetAttributeValue(`#xpp`, "multiple", ""),

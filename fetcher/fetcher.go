@@ -34,7 +34,6 @@ func Fetch(chpx chan<- *t.ProxyServer, fspec t.FetcherSpec) {
 
 func fetchDynamicHTML(urlIdx int, url string, chpx chan<- *t.ProxyServer, fspec t.FetcherSpec) (c int) {
 	proxyMode := fspec.ProxyMode()
-	// o := chromedp.DefaultExecAllocatorOptions[:]
 	df := fspec.(t.DynamicHTMLFetcher)
 	var o []chromedp.ExecAllocatorOption
 	switch proxyMode {
@@ -73,60 +72,49 @@ func fetchDynamicHTML(urlIdx int, url string, chpx chan<- *t.ProxyServer, fspec 
 	if conf.Args.WebDriver.NoImage {
 		o = append(o, chromedp.Flag("blink-settings", "imagesEnabled=false"))
 	}
-	if df.Headless() {
-		log.Debug("headless mode is enabled")
-		o = append(o, chromedp.Headless)
-	}
-	o = append(o, chromedp.NoFirstRun, chromedp.NoDefaultBrowserCheck)
+	// o = append(o, chromedp.NoFirstRun, chromedp.NoDefaultBrowserCheck)
 
-	// for _, opt := range chromedp.DefaultExecAllocatorOptions {
-	// 	if reflect.ValueOf(chromedp.Headless).Pointer() == reflect.ValueOf(opt).Pointer() &&
-	// 		!conf.Args.WebDriver.Headless {
-	// 		log.Debug("ignored headless mode")
-	// 		continue
-	// 	}
-	// 	o = append(o, opt)
-	// }
+	for _, opt := range chromedp.DefaultExecAllocatorOptions {
+		if reflect.ValueOf(chromedp.Headless).Pointer() == reflect.ValueOf(opt).Pointer() {
+			if df.Headless() {
+				log.Debug("headless mode is enabled")
+			} else {
+				log.Debug("ignored headless mode")
+				continue
+			}
+		}
+		o = append(o, opt)
+	}
 
 	psmap := make(map[string]*t.ProxyServer)
 	op := func(rc int) (e error) {
-		var (
-			ctx, ctxNav        context.Context
-			c1, c2, c3, cNav context.CancelFunc
-		)
-		defer func() {
-			if c1 != nil {
-				c1()
-			}
-			if c2 != nil {
-				c2()
-			}
-			if c3 != nil {
-				c3()
-			}
-			if cNav != nil{
-				cNav()
-			}
-		}()
-		// create context
-		ctx, c1 = context.WithTimeout(context.Background(), time.Duration(conf.Args.WebDriver.Timeout)*time.Second)
-		ctx, c2 = chromedp.NewExecAllocator(ctx, o...)
-		ctx, c3 = chromedp.NewContext(ctx)
-
 		//clear browser cache
 		// if e = network.ClearBrowserCache().Do(ctx); e != nil {
 		// 	log.Errorf("#%d %s failed to clear browser cache: %+v", rc, url, e)
 		// }
 
+		// create parent context
+		ctx, c := chromedp.NewExecAllocator(context.Background(), o...)
+		defer c()
+		ctx, c = chromedp.NewContext(ctx)
+		defer c()
 		// navigate
-		ctxNav, cNav = context.WithTimeout(ctx, time.Duration(df.HomePageTimeout())*time.Second)
-		if e = chromedp.Run(ctxNav, chromedp.Navigate(url)); e != nil {
+		// create context with homepage-specific timeout
+		// ctx, c := context.WithTimeout(parent, time.Duration(df.HomePageTimeout())*time.Second)
+		// defer c()
+		tm := time.AfterFunc(time.Duration(df.HomePageTimeout())*time.Second, c)
+		if e = chromedp.Run(ctx, chromedp.Navigate(url)); e != nil {
 			//TODO maybe it will not timeout when using a bad proxy, and shows chrome error page instead
-			e = errors.Wrapf(e, "#%d failed to run webdriver for %+s", rc, url)
+			e = errors.Wrapf(e, "#%d failed to navigate %s", rc, url)
 			log.Error(e)
 			return repeat.HintTemporary(e)
 		}
+		tm.Stop()
+
+		//Do the fetching
 		var ps []*t.ProxyServer
+		ctx, c = context.WithTimeout(ctx, time.Duration(conf.Args.WebDriver.Timeout)*time.Second)
+		defer c()
 		if ps, e = df.Fetch(ctx, urlIdx, url); e != nil {
 			for _, el := range ps {
 				psmap[fmt.Sprintf("%s:%s", el.Host, el.Port)] = el
