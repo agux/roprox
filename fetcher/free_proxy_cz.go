@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/PuerkitoBio/goquery"
-	"github.com/carusyte/roprox/types"
+	"github.com/agux/roprox/types"
 )
 
 //FreeProxyCZ fetches proxy server from http://free-proxy.cz

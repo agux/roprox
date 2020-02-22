@@ -6,7 +6,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/carusyte/roprox/types"
+	"github.com/agux/roprox/types"
 )
 
 //ProxyFish fetches proxy info from proxyfish.com

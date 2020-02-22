@@ -11,9 +11,9 @@ import (
 	"time"
 
 	"github.com/PuerkitoBio/goquery"
-	"github.com/carusyte/roprox/conf"
-	"github.com/carusyte/roprox/data"
-	"github.com/carusyte/roprox/types"
+	"github.com/agux/roprox/conf"
+	"github.com/agux/roprox/data"
+	"github.com/agux/roprox/types"
 	"github.com/pkg/errors"
 	"golang.org/x/net/proxy"
 )

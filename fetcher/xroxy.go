@@ -4,7 +4,7 @@ import (
 	"strings"
 
 	"github.com/PuerkitoBio/goquery"
-	"github.com/carusyte/roprox/types"
+	"github.com/agux/roprox/types"
 )
 
 //Xroxy fetches proxy server from https://www.xroxy.com

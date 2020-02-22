@@ -4,7 +4,7 @@ import (
 	"strings"
 
 	"github.com/PuerkitoBio/goquery"
-	"github.com/carusyte/roprox/types"
+	"github.com/agux/roprox/types"
 )
 
 //Z66IP fetches proxy server from http://www.66ip.cn

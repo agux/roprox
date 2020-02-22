@@ -4,7 +4,7 @@ import (
 	"io"
 	"os"
 
-	"github.com/carusyte/roprox/conf"
+	"github.com/agux/roprox/conf"
 	"github.com/sirupsen/logrus"
 	prefixed "github.com/x-cray/logrus-prefixed-formatter"
 )

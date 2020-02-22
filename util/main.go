@@ -1,9 +1,9 @@
 package util
 
 import (
-	"github.com/carusyte/roprox/data"
-	"github.com/carusyte/roprox/logging"
-	"github.com/carusyte/roprox/types"
+	"github.com/agux/roprox/data"
+	"github.com/agux/roprox/logging"
+	"github.com/agux/roprox/types"
 )
 
 var log = logging.Logger

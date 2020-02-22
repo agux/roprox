@@ -1,6 +1,6 @@
 package fetcher
 
-import "github.com/carusyte/roprox/logging"
+import "github.com/agux/roprox/logging"
 
 var log = logging.Logger
 

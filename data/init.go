@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/carusyte/roprox/conf"
-	"github.com/carusyte/roprox/logging"
+	"github.com/agux/roprox/conf"
+	"github.com/agux/roprox/logging"
 	"github.com/go-gorp/gorp"
 
 	//the mysql driver

@@ -4,10 +4,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/carusyte/roprox/conf"
-	"github.com/carusyte/roprox/data"
-	"github.com/carusyte/roprox/types"
-	"github.com/carusyte/roprox/util"
+	"github.com/agux/roprox/conf"
+	"github.com/agux/roprox/data"
+	"github.com/agux/roprox/types"
+	"github.com/agux/roprox/util"
 )
 
 func check(wg *sync.WaitGroup) {

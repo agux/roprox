@@ -15,10 +15,10 @@ import (
 
 	//shorten type reference
 
-	"github.com/carusyte/roprox/conf"
-	"github.com/carusyte/roprox/types"
-	t "github.com/carusyte/roprox/types"
-	"github.com/carusyte/roprox/util"
+	"github.com/agux/roprox/conf"
+	"github.com/agux/roprox/types"
+	t "github.com/agux/roprox/types"
+	"github.com/agux/roprox/util"
 	"golang.org/x/text/encoding/simplifiedchinese"
 	"golang.org/x/text/transform"
 )

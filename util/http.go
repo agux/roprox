@@ -8,8 +8,8 @@ import (
 	"regexp"
 	"time"
 
-	"github.com/carusyte/roprox/conf"
-	"github.com/carusyte/roprox/types"
+	"github.com/agux/roprox/conf"
+	"github.com/agux/roprox/types"
 	"github.com/pkg/errors"
 	"github.com/ssgreg/repeat"
 	"golang.org/x/net/proxy"

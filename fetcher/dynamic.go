@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/carusyte/roprox/conf"
+	"github.com/agux/roprox/conf"
 	"github.com/chromedp/cdproto/dom"
 	"github.com/chromedp/cdproto/emulation"
 	"github.com/chromedp/cdproto/page"

@@ -3,8 +3,8 @@ package main
 import (
 	"sync"
 
-	"github.com/carusyte/roprox/conf"
-	"github.com/carusyte/roprox/logging"
+	"github.com/agux/roprox/conf"
+	"github.com/agux/roprox/logging"
 	"github.com/sirupsen/logrus"
 )
 

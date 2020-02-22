@@ -3,7 +3,7 @@ package fetcher
 import (
 	"testing"
 
-	"github.com/carusyte/roprox/types"
+	"github.com/agux/roprox/types"
 )
 
 func TestFetch_FreeProxyList(t *testing.T) {

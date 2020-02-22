@@ -1,8 +1,8 @@
 package main
 
 import (
-	f "github.com/carusyte/roprox/fetcher"
-	t "github.com/carusyte/roprox/types"
+	f "github.com/agux/roprox/fetcher"
+	t "github.com/agux/roprox/types"
 )
 
 var fslist = []t.FetcherSpec{

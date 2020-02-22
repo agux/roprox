@@ -1,4 +1,4 @@
-module github.com/carusyte/roprox
+module github.com/agux/roprox
 
 go 1.13
 

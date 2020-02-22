@@ -6,8 +6,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/carusyte/roprox/conf"
-	"github.com/carusyte/roprox/types"
+	"github.com/agux/roprox/conf"
+	"github.com/agux/roprox/types"
 	"github.com/chromedp/chromedp"
 	"github.com/pkg/errors"
 	"github.com/ssgreg/repeat"

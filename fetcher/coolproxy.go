@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"strconv"
 
-	"github.com/carusyte/roprox/types"
+	"github.com/agux/roprox/types"
 )
 
 //CoolProxy fetches proxy server from https://www.cool-proxy.net/

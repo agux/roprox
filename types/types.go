@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/PuerkitoBio/goquery"
-	"github.com/carusyte/roprox/logging"
+	"github.com/agux/roprox/logging"
 )
 
 var log = logging.Logger

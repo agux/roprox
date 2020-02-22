@@ -6,10 +6,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/carusyte/roprox/conf"
-	"github.com/carusyte/roprox/data"
-	"github.com/carusyte/roprox/fetcher"
-	t "github.com/carusyte/roprox/types"
+	"github.com/agux/roprox/conf"
+	"github.com/agux/roprox/data"
+	"github.com/agux/roprox/fetcher"
+	t "github.com/agux/roprox/types"
 )
 
 func scan(wg *sync.WaitGroup) {

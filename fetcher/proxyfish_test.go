@@ -3,8 +3,8 @@ package fetcher
 import (
 	"testing"
 
-	"github.com/carusyte/roprox/conf"
-	"github.com/carusyte/roprox/types"
+	"github.com/agux/roprox/conf"
+	"github.com/agux/roprox/types"
 )
 
 func TestFetch_ProxyFish(t *testing.T) {
