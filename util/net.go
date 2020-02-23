@@ -45,6 +45,7 @@ func ValidateProxy(stype, host, port, link, targetID string, probeTimeout int) b
 		log.Warnf("%s timed out", addr)
 		return false
 	}
+	conn.Close()
 
 	var client *http.Client
 	if strings.EqualFold("socks5", stype) {

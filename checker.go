@@ -92,6 +92,7 @@ func queryServersForLocal(ch chan<- *types.ProxyServer) {
 func queryServersForGlobal(ch chan<- *types.ProxyServer) {
 	log.Debug("collecting servers for global probe...")
 	var list []*types.ProxyServer
+	//TODO might need to use separate 'last_check' field for globa/local proxy checking
 	query := `SELECT 
 					*
 				FROM
@@ -147,7 +148,7 @@ func probeGlobal(ch <-chan *types.ProxyServer) {
 			for ps := range ch {
 				var e error
 				if util.ValidateProxy(ps.Type, ps.Host, ps.Port,
-					`www.google.com`, `#tsf`, conf.Args.GlobalProbeTimeout) {
+					`http://www.google.com`, `#tsf`, conf.Args.GlobalProbeTimeout) {
 					_, e = data.DB.Exec(`update proxy_list set status_g = ?, `+
 						`suc_g = suc_g+1, score_g = suc_g/(suc_g+fail_g)*100, `+
 						`last_check = ? where host = ? and port = ?`,
