@@ -19,9 +19,10 @@ type Arguments struct {
 	LogLevel               string  `mapstructure:"log_level"`
 	ScannerPoolSize        int     `mapstructure:"scanner_pool_size"`
 	ScannerMaxRetry        int     `mapstructure:"scanner_max_retry"`
-	ProbeSize              int     `mapstructure:"probe_size"`
-	ProbeInterval          int     `mapstructure:"probe_interval"`
-	ProbeTimeout           int     `mapstructure:"probe_timeout"`
+	LocalProbeSize         int     `mapstructure:"local_probe_size"`
+	LocalProbeInterval     int     `mapstructure:"local_probe_interval"`
+	LocalProbeTimeout      int     `mapstructure:"local_probe_timeout"`
+	LocalProbeRetry        int     `mapstructure:"local_probe_retry"`
 	GlobalProbeSize        int     `mapstructure:"global_probe_size"`
 	GlobalProbeInterval    int     `mapstructure:"global_probe_interval"`
 	GlobalProbeTimeout     int     `mapstructure:"global_probe_timeout"`

@@ -64,16 +64,16 @@ func (p *ProxyServer) String() string {
 //NewProxyServer creates an instance of ProxyServer.
 func NewProxyServer(source, host, port, ptype, loc string) *ProxyServer {
 	return &ProxyServer{
-		Source:      source,
-		Host:        host,
-		Port:        port,
-		Type:        ptype,
-		Loc:         loc,
-		Status:      UNK,
-		StatusG:     UNK,
-		Fail:        0,
-		FailG:       0,
-		LastCheck:   time.Now().Format(DateTimeFormat),
+		Source:  source,
+		Host:    host,
+		Port:    port,
+		Type:    ptype,
+		Loc:     loc,
+		Status:  UNK,
+		StatusG: UNK,
+		// Fail:    0,
+		// FailG:   0,
+		// LastCheck:   time.Now().Format(DateTimeFormat),
 		LastScanned: time.Now().Format(DateTimeFormat),
 	}
 }

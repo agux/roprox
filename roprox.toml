@@ -4,9 +4,10 @@ log_level = "trace"
 scanner_pool_size = 10
 scanner_max_retry = 2
 
-probe_size = 16
-probe_interval = 180
-probe_timeout = 10
+local_probe_size = 16
+local_probe_interval = 180
+local_probe_timeout = 10
+local_probe_retry = 3
 
 global_probe_size = 8
 global_probe_interval = 180

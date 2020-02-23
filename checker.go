@@ -45,7 +45,7 @@ func Tick(lch chan<- *types.ProxyServer, gch chan<- *types.ProxyServer) {
 	evictBrokenServers()
 	queryServersForLocal(lch)
 	queryServersForGlobal(gch)
-	probeTk := time.NewTicker(time.Duration(conf.Args.ProbeInterval) * time.Second)
+	probeTk := time.NewTicker(time.Duration(conf.Args.LocalProbeInterval) * time.Second)
 	probeTkG := time.NewTicker(time.Duration(conf.Args.GlobalProbeInterval) * time.Second)
 	evictTk := time.NewTicker(time.Duration(conf.Args.EvictionInterval) * time.Second)
 	quit := make(chan struct{})
@@ -75,10 +75,12 @@ func queryServersForLocal(ch chan<- *types.ProxyServer) {
 					proxy_list
 				WHERE
 					status = ?
-					or last_check <= ?
+					or (last_check <= ? and (suc > 0 or fail <= ?))
 					order by last_check`
-	_, e := data.DB.Select(&list, query, types.UNK, time.Now().Add(
-		-time.Duration(conf.Args.ProbeInterval)*time.Second).Format(util.DateTimeFormat))
+	_, e := data.DB.Select(&list, query, types.UNK,
+		time.Now().Add(-time.Duration(conf.Args.LocalProbeInterval)*time.Second).Format(util.DateTimeFormat),
+		conf.Args.LocalProbeRetry,
+	)
 	if e != nil {
 		log.Errorln("failed to query proxy servers for local probe", e)
 		return
@@ -116,13 +118,13 @@ func queryServersForGlobal(ch chan<- *types.ProxyServer) {
 }
 
 func probeLocal(chjobs <-chan *types.ProxyServer) {
-	for i := 0; i < conf.Args.ProbeSize; i++ {
+	for i := 0; i < conf.Args.LocalProbeSize; i++ {
 		time.Sleep(time.Millisecond * 3500)
 		go func() {
 			for ps := range chjobs {
 				var e error
 				if util.ValidateProxy(ps.Type, ps.Host, ps.Port,
-					`http://www.baidu.com`, "#wrapper", conf.Args.ProbeTimeout) {
+					`http://www.baidu.com`, "#wrapper", conf.Args.LocalProbeTimeout) {
 					_, e = data.DB.Exec(`update proxy_list set status = ?, `+
 						`suc = suc+1, score = suc/(suc+fail)*100, `+
 						`last_check = ? where host = ? and port = ?`,
