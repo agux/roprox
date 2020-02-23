@@ -13,8 +13,8 @@ import (
 func check(wg *sync.WaitGroup) {
 	defer wg.Done()
 
-	lch := make(chan *types.ProxyServer, 128)
-	gch := make(chan *types.ProxyServer, 128)
+	lch := make(chan *types.ProxyServer, 8192)
+	gch := make(chan *types.ProxyServer, 8192)
 	probeLocal(lch)
 	probeGlobal(gch)
 	Tick(lch, gch)
@@ -34,7 +34,7 @@ func evictBrokenServers() {
 	}
 	ra, e := r.RowsAffected()
 	if e != nil {
-		log.Warnf("unable to get rows affected after eviction", e)
+		log.Errorf("unable to get rows affected after eviction: %+v", e)
 		return
 	}
 	log.Infof("%d broken servers evicted", ra)
