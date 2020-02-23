@@ -8,7 +8,7 @@ import (
 )
 
 func Test_main(t *testing.T) {
-	
+
 }
 
 func Test_Check(t *testing.T) {
@@ -21,5 +21,14 @@ func Test_ProbeGlobal(t *testing.T) {
 	wg.Add(1)
 	ch <- types.NewProxyServer("SpyesOne", "47.112.35.4", "1080", "socks5", "")
 	probeGlobal(ch)
-	wg.Wait()	
+	wg.Wait()
+}
+
+func Test_ProbeLocal(t *testing.T) {
+	ch := make(chan *types.ProxyServer, 16)
+	var wg sync.WaitGroup
+	wg.Add(1)
+	ch <- types.NewProxyServer("GatherProxy", "47.94.220.11", "3128", "http", "")
+	probeLocal(ch)
+	wg.Wait()
 }

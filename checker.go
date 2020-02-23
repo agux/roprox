@@ -101,7 +101,7 @@ func queryServersForGlobal(ch chan<- *types.ProxyServer) {
 					proxy_list
 				WHERE
 					status_g = ?
-					or (last_check <= ? and (suc_g > 0 or fail <= ?))
+					or (last_check <= ? and (suc_g > 0 or fail_g <= ?))
 					order by last_check`
 	_, e := data.DB.Select(&list, query, types.UNK,
 		time.Now().Add(-time.Duration(conf.Args.GlobalProbeInterval)*time.Second).Format(util.DateTimeFormat),
