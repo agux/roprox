@@ -250,7 +250,7 @@ func waitPageLoaded(ctx context.Context) error {
 	}
 }
 
-func allocatorOptions(fspec types.FetcherSpec) (o []chromedp.ExecAllocatorOption){
+func allocatorOptions(fspec types.FetcherSpec) (o []chromedp.ExecAllocatorOption, rpx *types.ProxyServer){
 	proxyMode := fspec.ProxyMode()
 	df := fspec.(types.DynamicHTMLFetcher)
 	switch proxyMode {
@@ -259,7 +259,6 @@ func allocatorOptions(fspec types.FetcherSpec) (o []chromedp.ExecAllocatorOption
 		log.Debugf("using proxy: %s", p)
 		o = append(o, chromedp.ProxyServer(p))
 	case types.RotateProxy:
-		var rpx *types.ProxyServer
 		var e error
 		if rpx, e = util.PickProxy(); e != nil {
 			log.Fatalf("%s unable to pick rotate proxy: %+v", fspec.UID(), e)
@@ -269,7 +268,6 @@ func allocatorOptions(fspec types.FetcherSpec) (o []chromedp.ExecAllocatorOption
 		log.Debugf("using proxy: %s", p)
 		o = append(o, chromedp.ProxyServer(p))
 	case types.RotateGlobalProxy:
-		var rpx *types.ProxyServer
 		var e error
 		if rpx, e = util.PickGlobalProxy(); e != nil {
 			log.Fatalf("%s unable to pick global rotate proxy: %+v", fspec.UID(), e)

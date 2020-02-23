@@ -83,7 +83,7 @@ func queryServersForLocal(ch chan<- *types.ProxyServer) {
 		log.Errorln("failed to query proxy servers for local probe", e)
 		return
 	}
-	log.Debugf("%d stale servers pending for health check", len(list))
+	log.Debugf("%d stale servers pending for health check (local)", len(list))
 	for _, p := range list {
 		ch <- p
 	}
@@ -98,7 +98,7 @@ func queryServersForGlobal(ch chan<- *types.ProxyServer) {
 					proxy_list
 				WHERE
 					status_g = ?
-					or (last_check <= ? and (suc_g > 0 or fail < ?))
+					or (last_check <= ? and (suc_g > 0 or fail <= ?))
 					order by last_check`
 	_, e := data.DB.Select(&list, query, types.UNK,
 		time.Now().Add(-time.Duration(conf.Args.GlobalProbeInterval)*time.Second).Format(util.DateTimeFormat),
@@ -108,7 +108,7 @@ func queryServersForGlobal(ch chan<- *types.ProxyServer) {
 		log.Errorln("failed to query proxy servers for global probe", e)
 		return
 	}
-	log.Debugf("%d stale servers pending for health check", len(list))
+	log.Debugf("%d stale servers pending for health check (global)", len(list))
 	for _, p := range list {
 		ch <- p
 	}

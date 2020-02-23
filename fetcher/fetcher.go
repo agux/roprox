@@ -35,7 +35,7 @@ func Fetch(chpx chan<- *t.ProxyServer, fspec t.FetcherSpec) {
 func fetchDynamicHTML(urlIdx int, url string, chpx chan<- *t.ProxyServer, fspec t.FetcherSpec) (c int) {
 	df := fspec.(t.DynamicHTMLFetcher)
 	psmap := make(map[string]*t.ProxyServer)
-	
+
 	op := func(rc int) (e error) {
 		//clear browser cache
 		// if e = network.ClearBrowserCache().Do(ctx); e != nil {
@@ -43,9 +43,10 @@ func fetchDynamicHTML(urlIdx int, url string, chpx chan<- *t.ProxyServer, fspec 
 		// }
 
 		// create parent context
+		o, rpx := allocatorOptions(fspec)
 		ctx, c := chromedp.NewExecAllocator(
-			context.Background(), 
-			allocatorOptions(fspec)...)
+			context.Background(),
+			o...)
 		defer c()
 		ctx, c = chromedp.NewContext(ctx)
 		defer c()
@@ -55,6 +56,14 @@ func fetchDynamicHTML(urlIdx int, url string, chpx chan<- *t.ProxyServer, fspec 
 		// defer c()
 		tm := time.AfterFunc(time.Duration(df.HomePageTimeout())*time.Second, c)
 		if e = chromedp.Run(ctx, chromedp.Navigate(url)); e != nil {
+			if rpx != nil {
+				switch fspec.ProxyMode() {
+				case t.RotateGlobalProxy:
+					util.UpdateProxyScoreGlobal(rpx, false)
+				case t.RotateProxy:
+					util.UpdateProxyScore(rpx, false)
+				}
+			}
 			//TODO maybe it will not timeout when using a bad proxy, and shows chrome error page instead
 			e = errors.Wrapf(e, "#%d failed to navigate %s", rc, url)
 			log.Error(e)

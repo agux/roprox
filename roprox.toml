@@ -1,16 +1,17 @@
 # trace, debug, info, warning, error, fatal, panic
 log_level = "trace"
 
-master_proxy_addr = "127.0.0.1:1080"
-http_retry = 3
-http_timeout = 60
-
 scanner_pool_size = 10
 scanner_max_retry = 2
 
-probe_size = 32
+probe_size = 16
 probe_interval = 180
 probe_timeout = 10
+
+global_probe_size = 8
+global_probe_interval = 180
+global_probe_timeout = 15
+global_probe_retry = 2
 
 eviction_interval = 600
 #evict failed state proxy added 30 minutes earlier
@@ -20,6 +21,14 @@ eviction_score_threshold = 50.0
 
 [Logging]
 log_file_path = "roprox.log"
+
+[Network]
+master_proxy_addr = "127.0.0.1:1080"
+http_timeout = 60
+http_retry = 3
+rotate_proxy_score_threshold = 70.0
+rotate_proxy_global_score_threshold = 50.0
+default_user_agent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36"
 
 [WebDriver]
 headless = true
@@ -32,9 +41,20 @@ working_folder = "/home/user"
 user_agents = "https://developers.whatismybrowser.com/api/docs/latest/user-agent-database-dump-url-csv-sample.tar.gz"
 user_agent_lifespan = 10
 
+    [DataSource.SpysOne]
+    proxy_mode = "rotate_global"
+    headless = false
+    refresh_interval = 60
+    retry = 5
+    [DataSource.HideMyName]
+    proxy_mode = "master"
+    headless = true
+    refresh_interval = 60
+    retry = 2
+
 [Database]
 host = "127.0.0.1"
 port = 3306
-schema = "db"
+schema = "secu"
 user_name = "mysql"
 password = "password"

@@ -99,19 +99,21 @@ func saveProxyServer(bucket []*t.ProxyServer) {
 	}
 
 	valueStrings := make([]string, 0, len(bucket))
-	valueArgs := make([]interface{}, 0, len(bucket)*8)
+	valueArgs := make([]interface{}, 0, len(bucket)*9)
 	for _, el := range bucket {
-		valueStrings = append(valueStrings, "(?, ?, ?, ?, ?, ?, ?, ?)")
+		valueStrings = append(valueStrings, "(?, ?, ?, ?, ?, ?, ?, ?, ?)")
 		valueArgs = append(valueArgs, el.Source)
 		valueArgs = append(valueArgs, el.Host)
 		valueArgs = append(valueArgs, el.Port)
 		valueArgs = append(valueArgs, el.Type)
 		valueArgs = append(valueArgs, el.Loc)
 		valueArgs = append(valueArgs, el.Status)
+		valueArgs = append(valueArgs, el.StatusG)
 		valueArgs = append(valueArgs, el.LastCheck)
 		valueArgs = append(valueArgs, el.LastScanned)
 	}
-	stmt := fmt.Sprintf("INSERT IGNORE INTO proxy_list (source,host,port,type,loc,status,last_check,last_scanned) VALUES %s",
+	stmt := fmt.Sprintf("INSERT IGNORE INTO proxy_list ("+
+	"source,host,port,type,loc,status,status_g,last_check,last_scanned) VALUES %s",
 		// "on duplicate key update status=values(status),last_check=values(last_check),last_scanned=values(last_scanned)",
 		strings.Join(valueStrings, ","))
 	retry := 10
