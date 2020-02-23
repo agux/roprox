@@ -6,10 +6,13 @@ import (
 	"io/ioutil"
 	"math"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"time"
 
 	"github.com/agux/roprox/conf"
+	"github.com/agux/roprox/types"
+	"github.com/agux/roprox/util"
 	"github.com/chromedp/cdproto/dom"
 	"github.com/chromedp/cdproto/emulation"
 	"github.com/chromedp/cdproto/page"
@@ -245,4 +248,59 @@ func waitPageLoaded(ctx context.Context) error {
 	case <-ctx.Done():
 		return ctx.Err()
 	}
+}
+
+func allocatorOptions(fspec types.FetcherSpec) (o []chromedp.ExecAllocatorOption){
+	proxyMode := fspec.ProxyMode()
+	df := fspec.(types.DynamicHTMLFetcher)
+	switch proxyMode {
+	case types.MasterProxy:
+		p := fmt.Sprintf("socks5://%s", conf.Args.Network.MasterProxyAddr)
+		log.Debugf("using proxy: %s", p)
+		o = append(o, chromedp.ProxyServer(p))
+	case types.RotateProxy:
+		var rpx *types.ProxyServer
+		var e error
+		if rpx, e = util.PickProxy(); e != nil {
+			log.Fatalf("%s unable to pick rotate proxy: %+v", fspec.UID(), e)
+			return
+		}
+		p := fmt.Sprintf("%s://%s:%s", rpx.Type, rpx.Host, rpx.Port)
+		log.Debugf("using proxy: %s", p)
+		o = append(o, chromedp.ProxyServer(p))
+	case types.RotateGlobalProxy:
+		var rpx *types.ProxyServer
+		var e error
+		if rpx, e = util.PickGlobalProxy(); e != nil {
+			log.Fatalf("%s unable to pick global rotate proxy: %+v", fspec.UID(), e)
+			return
+		}
+		p := fmt.Sprintf("%s://%s:%s", rpx.Type, rpx.Host, rpx.Port)
+		log.Debugf("using global proxy: %s", p)
+		o = append(o, chromedp.ProxyServer(p))
+	}
+	if types.Direct != proxyMode {
+		if ua, e := util.PickUserAgent(); e != nil {
+			log.Fatalf("failed to pick user agents from the pool: %+v", e)
+		} else {
+			o = append(o, chromedp.UserAgent(ua))
+		}
+	}
+	if conf.Args.WebDriver.NoImage {
+		o = append(o, chromedp.Flag("blink-settings", "imagesEnabled=false"))
+	}
+	// o = append(o, chromedp.NoFirstRun, chromedp.NoDefaultBrowserCheck)
+
+	for _, opt := range chromedp.DefaultExecAllocatorOptions {
+		if reflect.ValueOf(chromedp.Headless).Pointer() == reflect.ValueOf(opt).Pointer() {
+			if df.Headless() {
+				log.Debug("headless mode is enabled")
+			} else {
+				log.Debug("ignored headless mode")
+				continue
+			}
+		}
+		o = append(o, opt)
+	}
+	return
 }

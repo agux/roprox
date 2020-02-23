@@ -33,60 +33,9 @@ func Fetch(chpx chan<- *t.ProxyServer, fspec t.FetcherSpec) {
 }
 
 func fetchDynamicHTML(urlIdx int, url string, chpx chan<- *t.ProxyServer, fspec t.FetcherSpec) (c int) {
-	proxyMode := fspec.ProxyMode()
 	df := fspec.(t.DynamicHTMLFetcher)
-	var o []chromedp.ExecAllocatorOption
-	switch proxyMode {
-	case types.MasterProxy:
-		p := fmt.Sprintf("socks5://%s", conf.Args.Network.MasterProxyAddr)
-		log.Debugf("using proxy: %s", p)
-		o = append(o, chromedp.ProxyServer(p))
-	case types.RotateProxy:
-		var rpx *types.ProxyServer
-		var e error
-		if rpx, e = util.PickProxy(); e != nil {
-			log.Fatalf("%s unable to pick rotate proxy: %+v", fspec.UID(), e)
-			return
-		}
-		p := fmt.Sprintf("%s://%s:%s", rpx.Type, rpx.Host, rpx.Port)
-		log.Debugf("using proxy: %s", p)
-		o = append(o, chromedp.ProxyServer(p))
-	case types.RotateGlobalProxy:
-		var rpx *types.ProxyServer
-		var e error
-		if rpx, e = util.PickGlobalProxy(); e != nil {
-			log.Fatalf("%s unable to pick global rotate proxy: %+v", fspec.UID(), e)
-			return
-		}
-		p := fmt.Sprintf("%s://%s:%s", rpx.Type, rpx.Host, rpx.Port)
-		log.Debugf("using global proxy: %s", p)
-		o = append(o, chromedp.ProxyServer(p))
-	}
-	if types.Direct != proxyMode {
-		if ua, e := util.PickUserAgent(); e != nil {
-			log.Fatalf("failed to pick user agents from the pool: %+v", e)
-		} else {
-			o = append(o, chromedp.UserAgent(ua))
-		}
-	}
-	if conf.Args.WebDriver.NoImage {
-		o = append(o, chromedp.Flag("blink-settings", "imagesEnabled=false"))
-	}
-	// o = append(o, chromedp.NoFirstRun, chromedp.NoDefaultBrowserCheck)
-
-	for _, opt := range chromedp.DefaultExecAllocatorOptions {
-		if reflect.ValueOf(chromedp.Headless).Pointer() == reflect.ValueOf(opt).Pointer() {
-			if df.Headless() {
-				log.Debug("headless mode is enabled")
-			} else {
-				log.Debug("ignored headless mode")
-				continue
-			}
-		}
-		o = append(o, opt)
-	}
-
 	psmap := make(map[string]*t.ProxyServer)
+	
 	op := func(rc int) (e error) {
 		//clear browser cache
 		// if e = network.ClearBrowserCache().Do(ctx); e != nil {
@@ -94,7 +43,9 @@ func fetchDynamicHTML(urlIdx int, url string, chpx chan<- *t.ProxyServer, fspec 
 		// }
 
 		// create parent context
-		ctx, c := chromedp.NewExecAllocator(context.Background(), o...)
+		ctx, c := chromedp.NewExecAllocator(
+			context.Background(), 
+			allocatorOptions(fspec)...)
 		defer c()
 		ctx, c = chromedp.NewContext(ctx)
 		defer c()

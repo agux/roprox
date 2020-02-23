@@ -89,7 +89,7 @@ func (f SpysOne) fetchProxyForBot(parent context.Context) (ps []*types.ProxyServ
 //Fetch the proxy info.
 func (f SpysOne) Fetch(parent context.Context, urlIdx int, url string) (ps []*types.ProxyServer, e error) {
 
-	//check if #xpp is present (valid). otherwise the source IP has been banned
+	//check if #xpp is present (valid). otherwise the source IP might have been banned
 	ctx, c := context.WithTimeout(parent, time.Second*10)
 	defer c()
 	if e = chromedp.Run(ctx,
@@ -98,12 +98,12 @@ func (f SpysOne) Fetch(parent context.Context, urlIdx int, url string) (ps []*ty
 		e = errors.Wrapf(e, "%s #xpp cannot be detected", f.UID())
 		log.Error(e)
 		//check if banned page is shown
-		if b, e := f.isBanned(parent); e != nil {
-			e = errors.Wrapf(e, "failed to check ban page")
-			return ps, e
-		} else if b {
-			return f.fetchProxyForBot(parent)
-		}
+		// if b, e := f.isBanned(parent); e != nil {
+		// 	e = errors.Wrapf(e, "failed to check ban page")
+		// 	return ps, e
+		// } else if b {
+		// 	// return f.fetchProxyForBot(parent)
+		// }
 		//unknown state
 		return ps, e
 	}
@@ -115,7 +115,7 @@ func (f SpysOne) Fetch(parent context.Context, urlIdx int, url string) (ps []*ty
 	var xppLen int
 	var str string
 
-	if e = chromedp.Run(ctx,
+	if e = chromedp.Run(parent,
 		// chromedp.WaitVisible(`#xpp`),
 		chromedp.JavascriptAttribute(`#xpp`, `length`, &xppLen),
 		chromedp.TextContent(`#xpp option:last-child`, &str),
@@ -132,7 +132,7 @@ func (f SpysOne) Fetch(parent context.Context, urlIdx int, url string) (ps []*ty
 	// 	return ps, errors.Wrapf(e, "unable to convert max record string: %s", str)
 	// }
 
-	if e = chromedp.Run(ctx,
+	if e = chromedp.Run(parent,
 		chromedp.WaitReady(`body > table:nth-child(3) > tbody > tr:nth-child(5) > td > table`),
 		chromedp.WaitReady(`body > table:nth-child(3) > tbody > tr:nth-child(5) > td `+
 			`> table > tbody > tr:nth-child(30)`),
@@ -140,7 +140,7 @@ func (f SpysOne) Fetch(parent context.Context, urlIdx int, url string) (ps []*ty
 		return ps, errors.Wrapf(e, "failed to wait page refresh")
 	}
 
-	if e = scrollToBottom(ctx); e != nil {
+	if e = scrollToBottom(parent); e != nil {
 		return
 	}
 
@@ -158,7 +158,7 @@ func (f SpysOne) Fetch(parent context.Context, urlIdx int, url string) (ps []*ty
 		locSel = `body > table:nth-child(3) > tbody > tr:nth-child(5) > td > table > tbody > tr:nth-child(n+4) > td:nth-child(4)`
 	}
 
-	if e = chromedp.Run(ctx,
+	if e = chromedp.Run(parent,
 		// chromedp.WaitReady(fmt.Sprintf(`body > table:nth-child(3) > tbody > tr:nth-child(5) > td `+
 		// 	`> table > tbody > tr:nth-child(%d)`, max)),
 		//get ip and port
