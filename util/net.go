@@ -127,8 +127,11 @@ func PickProxy() (proxy *types.ProxyServer, e error) {
 		return proxy, errors.WithStack(e)
 	}
 	log.Infof("successfully fetched %d free proxy servers from database.", len(proxyList))
-	str := strings.Split(conf.Args.Network.MasterProxyAddr, ":")
-	proxyList = append(proxyList, types.NewProxyServer("config", str[0], str[1], "socks5", ""))
+	if host, port, e := net.SplitHostPort(conf.Args.Network.MasterProxyAddr); e != nil {
+		log.Errorf("unable to parse master proxy address %s: %+v", conf.Args.Network.MasterProxyAddr, e)
+	} else {
+		proxyList = append(proxyList, types.NewProxyServer("config", host, port, "socks5", ""))
+	}
 	return proxyList[rand.Intn(len(proxyList))], nil
 }
 

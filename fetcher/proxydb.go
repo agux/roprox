@@ -3,6 +3,7 @@ package fetcher
 import (
 	"context"
 	"math"
+	"net"
 	"strings"
 	"time"
 
@@ -225,12 +226,12 @@ func (f ProxyDB) parse(addr, ts, anon, locs []string) (ps []*types.ProxyServer, 
 			continue
 		}
 
-		ss := strings.Split(strings.TrimSpace(d), ":")
-		if len(ss) != 2 {
-			log.Warnf("%s possible invalid ip & port string, skipping: %+v", f.UID(), d)
+		host, port, e := net.SplitHostPort(strings.TrimSpace(d))
+		if e != nil {
+			log.Warnf("%s possible invalid ip & port string %+v, skipping %+v", f.UID(), d, e)
 			continue
 		}
-		host, port := strings.TrimSpace(ss[0]), strings.TrimSpace(ss[1])
+		host, port = strings.TrimSpace(host), strings.TrimSpace(port)
 
 		t := strings.ToLower(strings.TrimSpace(ts[i]))
 		if strings.Contains(t, "http") {

@@ -56,20 +56,14 @@ func fetchDynamicHTML(urlIdx int, url string, chpx chan<- *t.ProxyServer, fspec 
 		// defer c()
 		tm := time.AfterFunc(time.Duration(df.HomePageTimeout())*time.Second, c)
 		if e = chromedp.Run(ctx, chromedp.Navigate(url)); e != nil {
-			if rpx != nil {
-				switch fspec.ProxyMode() {
-				case t.RotateGlobalProxy:
-					util.UpdateProxyScoreGlobal(rpx, false)
-				case t.RotateProxy:
-					util.UpdateProxyScore(rpx, false)
-				}
-			}
+			updateProxyScore(fspec, rpx, false)
 			//TODO maybe it will not timeout when using a bad proxy, and shows chrome error page instead
 			e = errors.Wrapf(e, "#%d failed to navigate %s", rc, url)
 			log.Error(e)
 			return repeat.HintTemporary(e)
 		}
 		tm.Stop()
+		updateProxyScore(fspec, rpx, true)
 
 		//Do the fetching
 		var ps []*t.ProxyServer
@@ -201,4 +195,15 @@ func fetchFor(urlIdx int, url string, chpx chan<- *t.ProxyServer, fspec t.Fetche
 		log.Warnf("unsupported fetcher type: %+v", reflect.TypeOf(fspec))
 	}
 	log.Infof("%d proxies available from %s", c, url)
+}
+
+func updateProxyScore(fspec t.FetcherSpec, rpx *t.ProxyServer, suc bool) {
+	if rpx != nil {
+		switch fspec.ProxyMode() {
+		case t.RotateGlobalProxy:
+			util.UpdateProxyScoreGlobal(rpx, false)
+		case t.RotateProxy:
+			util.UpdateProxyScore(rpx, false)
+		}
+	}
 }

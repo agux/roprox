@@ -2,6 +2,7 @@ package fetcher
 
 import (
 	"context"
+	"net"
 	"strconv"
 	"strings"
 	"time"
@@ -151,7 +152,7 @@ func (f SpysOne) Fetch(parent context.Context, urlIdx int, url string) (ps []*ty
 			`> td > table > tbody > tr:not(:nth-child(2)) > td:nth-child(2)`
 	}
 	anonSel := `body > table:nth-child(3) > tbody > tr:nth-child(5) > td > table > tbody > tr > td:nth-child(3) > a > font`
-	locSel := `body > table:nth-child(3) > tbody > tr:nth-child(5) > td > table > tbody > tr > td:nth-child(4)`
+	locSel := `body > table:nth-child(3) > tbody > tr:nth-child(5) > td > table > tbody > tr:nth-child(n+3) > td:nth-child(4)`
 	if strings.Contains(url, "http://spys.one/free-proxy-list/CN") ||
 		strings.Contains(url, "http://spys.one/asia-proxy/") {
 		anonSel = `body > table:nth-child(3) > tbody > tr:nth-child(5) > td > table > tbody > tr:nth-child(n+4) > td:nth-child(3)`
@@ -196,12 +197,12 @@ func (f SpysOne) parse(ipPort, ts, anon, locations []string) (ps []*types.ProxyS
 			continue
 		}
 
-		ss := strings.Split(strings.TrimSpace(d), ":")
-		if len(ss) != 2 {
-			log.Warnf("%s possible invalid ip & port string, skipping: %+v", f.UID(), d)
+		host, port, e := net.SplitHostPort(strings.TrimSpace(d))
+		if e != nil {
+			log.Warnf("%s possible invalid ip & port string %s, skipping: %+v", f.UID(), d, e)
 			continue
 		}
-		host, port := strings.TrimSpace(ss[0]), strings.TrimSpace(ss[1])
+		host, port = strings.TrimSpace(host), strings.TrimSpace(port)
 
 		t := strings.ToLower(strings.TrimSpace(ts[i]))
 		if strings.Contains(t, "http") {

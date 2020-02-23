@@ -2,6 +2,7 @@ package fetcher
 
 import (
 	"encoding/base64"
+	"net"
 	"regexp"
 	"strings"
 
@@ -74,13 +75,11 @@ func (f ProxyListOrg) ScanItem(i, urlIdx int, s *goquery.Selection) (ps *types.P
 		return
 	}
 
-	strs := strings.Split(val, ":")
-	if len(strs) != 2 {
-		log.Errorf("unable to parse host:port string: %s", val)
+	host, port, e := net.SplitHostPort(val)
+	if e != nil {
+		log.Errorf("unable to parse host:port string %s : %+v", val, e)
 		return
 	}
-	host := strs[0]
-	port := strs[1]
 	ps = types.NewProxyServer(f.UID(), host, port, "http", "")
 	return
 }

@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"math/rand"
 	"strings"
 	"sync"
 	"time"
@@ -57,7 +58,7 @@ func launchScanners(chjobs <-chan string, chpx chan<- *t.ProxyServer) {
 				fetcher.Fetch(chpx, proxies[uid])
 			}
 		}()
-		time.Sleep(time.Millisecond * 5000)
+		time.Sleep(time.Millisecond * time.Duration(5000+rand.Intn(20000)))
 	}
 }
 
@@ -113,7 +114,7 @@ func saveProxyServer(bucket []*t.ProxyServer) {
 		valueArgs = append(valueArgs, el.LastScanned)
 	}
 	stmt := fmt.Sprintf("INSERT IGNORE INTO proxy_list ("+
-	"source,host,port,type,loc,status,status_g,last_check,last_scanned) VALUES %s",
+		"source,host,port,type,loc,status,status_g,last_check,last_scanned) VALUES %s",
 		// "on duplicate key update status=values(status),last_check=values(last_check),last_scanned=values(last_scanned)",
 		strings.Join(valueStrings, ","))
 	retry := 10
