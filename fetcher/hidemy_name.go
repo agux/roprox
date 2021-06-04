@@ -2,10 +2,11 @@ package fetcher
 
 import (
 	"context"
-	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
+	"github.com/PuerkitoBio/goquery"
 	"github.com/agux/roprox/conf"
 	"github.com/agux/roprox/types"
 	"github.com/chromedp/chromedp"
@@ -14,7 +15,7 @@ import (
 )
 
 //HideMyName fetches proxy info from this web
-type HideMyName struct{
+type HideMyName struct {
 	defaultDynamicHTMLFetcher
 }
 
@@ -25,6 +26,10 @@ func (f HideMyName) UID() string {
 
 func (f HideMyName) Retry() int {
 	return conf.Args.WebDriver.MaxRetry
+}
+
+func (f HideMyName) HomePageTimeout() int {
+	return conf.Args.DataSource.HideMyName.HomePageTimeout
 }
 
 //Urls return the server urls that provide the free proxy server lists.
@@ -45,21 +50,56 @@ func (f HideMyName) RefreshInterval() int {
 	return conf.Args.DataSource.HideMyName.RefreshInterval
 }
 
-func (f HideMyName) extract(ctx context.Context) (i, p, a, t, l []string, e error) {
-	i = make([]string, 0, 4)
-	p = make([]string, 0, 4)
-	a = make([]string, 0, 4)
-	t = make([]string, 0, 4)
-	l = make([]string, 0, 4)
-	if e = chromedp.Run(ctx,
-		chromedp.Evaluate(jsGetText(`table.proxy__t > tbody > tr > td:nth-child(1)`), &i),
-		chromedp.Evaluate(jsGetText(`table.proxy__t > tbody > tr > td:nth-child(2)`), &p),
-		chromedp.Evaluate(jsGetText(`table.proxy__t > tbody > tr > td:nth-child(3)`), &l),
-		chromedp.Evaluate(jsGetText(`table.proxy__t > tbody > tr > td:nth-child(5)`), &t),
-		chromedp.Evaluate(jsGetText(`table.proxy__t > tbody > tr > td:nth-child(6)`), &a),
-	); e != nil {
-		e = errors.Wrap(e, "failed to extract proxy info")
+// func (f HideMyName) extract(ctx context.Context) (i, p, a, t, l []string, e error) {
+// 	i = make([]string, 0, 4)
+// 	p = make([]string, 0, 4)
+// 	a = make([]string, 0, 4)
+// 	t = make([]string, 0, 4)
+// 	l = make([]string, 0, 4)
+// 	if e = chromedp.Run(ctx,
+// 		//body > div.wrap > div.services_proxylist.services > div > div.table_block > table > tbody > tr > td:nth-child(1)
+// 		chromedp.Evaluate(jsGetText(`table.proxy__t > tbody > tr > td:nth-child(1)`), &i),
+// 		chromedp.Evaluate(jsGetText(`table.proxy__t > tbody > tr > td:nth-child(2)`), &p),
+// 		chromedp.Evaluate(jsGetText(`table.proxy__t > tbody > tr > td:nth-child(3)`), &l),
+// 		chromedp.Evaluate(jsGetText(`table.proxy__t > tbody > tr > td:nth-child(5)`), &t),
+// 		chromedp.Evaluate(jsGetText(`table.proxy__t > tbody > tr > td:nth-child(6)`), &a),
+// 	); e != nil {
+// 		e = errors.Wrap(e, "failed to extract proxy info")
+// 	}
+// 	return
+// }
+
+func (f HideMyName) extract(html string) (i, p, a, t, l []string, e error) {
+	r := strings.NewReader(html)
+	doc, e := goquery.NewDocumentFromReader(r)
+	if e != nil {
+		log.Errorf("failed to create goquery reader from %s: %+v", html, e)
+		return
 	}
+	// ret, e := doc.Html()
+	// log.Debugf("document html:\n%s", ret)
+	//traverse the table rows
+	doc.Find(`body div.wrap div.services_proxylist.services div div.table_block table tbody tr`).Each(
+		func(idx int, s *goquery.Selection) {
+			ip := strings.TrimSpace(s.Find(`td:nth-child(1)`).Text())
+			port := strings.TrimSpace(s.Find(`td:nth-child(2)`).Text())
+			loc := strings.TrimSpace(s.Find(`td:nth-child(3)`).Text())
+			tp := strings.TrimSpace(s.Find(`td:nth-child(5)`).Text())
+			anon := strings.TrimSpace(s.Find(`td:nth-child(6)`).Text())
+			//drop the following proxy
+			if len(ip) == 0 || len(port) == 0 ||
+				!(strings.Contains(tp, "HTTP") || strings.Contains(tp, "SOCKS5")) ||
+				strings.EqualFold(anon, "no") {
+				return
+			}
+
+			i = append(i, ip)
+			p = append(p, port)
+			a = append(a, anon)
+			t = append(t, tp)
+			l = append(l, loc)
+		})
+
 	return
 }
 
@@ -112,30 +152,34 @@ func (f HideMyName) Fetch(ctx context.Context, urlIdx int, url string) (ps []*ty
 	// }
 	// log.Debugf("page rect: %+v", *rect)
 
-	if e = chromedp.Run(ctx,
-		chromedp.WaitNotPresent(`div.attribution`),
-	); e != nil {
-		e = errors.Wrap(e, "failed to wait 'div.attribution' to exit")
-		return
-	}
+	// if e = chromedp.Run(ctx,
+	// 	chromedp.WaitNotPresent(`div.attribution`),
+	// ); e != nil {
+	// 	e = errors.Wrap(e, "failed to wait 'div.attribution' to exit")
+	// 	return
+	// }
 
-	log.Debug("div.attribution exited")
+	// log.Debug("div.attribution exited")
 
 	// dumpHTML(ctx, f.UID())
 	// captureScreen(ctx, f.UID(), 90)
 
+	html := ""
+	selTable := `body div.wrap div.services_proxylist.services div div.table_block table tbody`
 	if e = chromedp.Run(ctx,
-		chromedp.WaitReady(`table.proxy__t`),
+		chromedp.WaitReady(selTable),
+		chromedp.OuterHTML(`html`, &html),
 	); e != nil {
-		e = errors.Wrap(e, "failed to wait dom element 'table.proxy__t' ")
+		e = errors.Wrap(e, "failed to wait html table")
 		return
 	}
 
-	log.Debug("table.proxy__t is ready")
+	log.Debug("html table is ready")
+	log.Tracef("html source:\n %+v", html)
 
 	var ips, ports, anon, ts, locs []string
 	//extract first page
-	if ips, ports, anon, ts, locs, e = f.extract(ctx); e != nil {
+	if ips, ports, anon, ts, locs, e = f.extract(html); e != nil {
 		e = errors.Wrap(e, "unable to extract proxy info")
 		log.Error(e)
 	} else {
@@ -150,41 +194,47 @@ func (f HideMyName) Fetch(ctx context.Context, urlIdx int, url string) (ps []*ty
 	}
 
 	//page page num
-	var numPage int
+	var strPage string
 	if e = chromedp.Run(ctx,
-		chromedp.WaitReady(`div.proxy__pagination > ul`),
-		chromedp.JavascriptAttribute(`div.proxy__pagination > ul`, "childElementCount", &numPage),
+		chromedp.WaitReady(`body div div.services_proxylist.services div div.pagination`),
+		chromedp.Text(`body div div.services_proxylist.services div div.pagination ul li:nth-last-child(2)`, &strPage),
 	); e != nil {
 		e = errors.Wrapf(e, "failed to get page num")
 		log.Error(e)
 		return ps, repeat.HintStop(e)
 	}
-	//subtracts 1 arrow
-	numPage--
+	var numPage int64
+	if numPage, e = strconv.ParseInt(strPage, 10, 64); e != nil {
+		e = errors.Wrapf(e, "failed to convert page num string to integer: %s", strPage)
+		log.Error(e)
+		return ps, repeat.HintStop(e)
+	}
 
 	if numPage < 2 {
 		return
-	} else if numPage > 10 {
-		numPage = 10
+	} else if numPage > 20 {
+		numPage = 20
 	}
 
 	log.Debugf("#pages: %d", numPage)
 
 	st := time.Millisecond * 2000
-	for i := 1; i < numPage; i++ {
-
+	selNextPage := `body div.wrap div.services_proxylist.services div div.pagination ul li.next_array`
+	selNextTable := `body div div.services_proxylist.services div div.table_block table tbody`
+	for i := 1; i < int(numPage); i++ {
 		log.Debugf("flipping to page #%d", i+1)
 
 		if e = chromedp.Run(ctx,
-			chromedp.ScrollIntoView(`li.arrow__right`),
-			chromedp.SetJavascriptAttribute(`li.arrow__right > a`, "text", "Click Me"),
-			chromedp.Click(`li.arrow__right > a`),
-			chromedp.WaitReady(fmt.Sprintf(`//li[@class="is-active" and ./a/text()='%d']`, i+1)),
+			chromedp.ScrollIntoView(selNextPage),
+			chromedp.Click(selNextPage),
+			chromedp.WaitReady(selNextTable),
+			chromedp.OuterHTML(`html`, &html),
 		); e != nil {
 			e = errors.Wrapf(e, "failed to flip to page #%d", i+1)
 			return ps, repeat.HintStop(e)
 		}
 
+		log.Tracef("page#%d html source:\n %+v", i+1, html)
 		log.Debugf("extracting page #%d", i+1)
 
 		// if e = waitPageLoaded(ctx); e != nil {
@@ -193,7 +243,8 @@ func (f HideMyName) Fetch(ctx context.Context, urlIdx int, url string) (ps []*ty
 		// }
 
 		time.Sleep(st)
-		if ips, ports, anon, ts, locs, e = f.extract(ctx); e != nil {
+
+		if ips, ports, anon, ts, locs, e = f.extract(html); e != nil {
 			e = errors.Wrapf(e, "unable to extract proxy info at page #%d", i+1)
 			log.Error(e)
 			continue

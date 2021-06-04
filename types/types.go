@@ -101,6 +101,11 @@ type JSONFetcher interface {
 	ParseJSON(payload []byte) (ps []*ProxyServer)
 }
 
+type PlainTextFetcher interface {
+	//ParsePlainText parses plain text payload and extracts proxy information
+	ParsePlainText(payload []byte) (ps []*ProxyServer)
+}
+
 //StaticHTMLFetcher fetches target url by parsing static HTML content
 type StaticHTMLFetcher interface {
 	//IsGBK returns wheter the web page is GBK encoded.

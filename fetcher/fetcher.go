@@ -181,6 +181,27 @@ func fetchJSON(urlIdx int, url string, chpx chan<- *t.ProxyServer, fspec t.Fetch
 	return
 }
 
+func fetchPlainText(urlIdx int, url string, chpx chan<- *t.ProxyServer, fspec t.FetcherSpec) (c int) {
+	res, e := util.HTTPGetResponse(url, nil, fspec.ProxyMode() == types.MasterProxy, true)
+	if e != nil {
+		log.Errorf("failed to get free proxy list from %s, giving up %+v", url, e)
+		return
+	}
+	defer res.Body.Close()
+	payload, e := ioutil.ReadAll(res.Body)
+	if e != nil {
+		log.Errorf("failed to read html body from %s, giving up %+v", url, e)
+		return
+	}
+	log.Tracef("plain text returned from %s:\n%s", url, string(payload))
+	ps := fspec.(t.PlainTextFetcher).ParsePlainText(payload)
+	for _, p := range ps {
+		chpx <- p
+		c++
+	}
+	return
+}
+
 func fetchFor(urlIdx int, url string, chpx chan<- *t.ProxyServer, fspec t.FetcherSpec) {
 	log.Debugf("fetching proxy server from %s", url)
 	c := 0
@@ -191,6 +212,8 @@ func fetchFor(urlIdx int, url string, chpx chan<- *t.ProxyServer, fspec t.Fetche
 		c = fetchDynamicHTML(urlIdx, url, chpx, fspec)
 	case t.JSONFetcher:
 		c = fetchJSON(urlIdx, url, chpx, fspec)
+	case t.PlainTextFetcher:
+		c = fetchPlainText(urlIdx, url, chpx, fspec)
 	default:
 		log.Warnf("unsupported fetcher type: %+v", reflect.TypeOf(fspec))
 	}

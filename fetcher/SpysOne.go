@@ -78,15 +78,6 @@ func (f SpysOne) isBanned(parent context.Context) (b bool, e error) {
 	return
 }
 
-func (f SpysOne) fetchProxyForBot(parent context.Context) (ps []*types.ProxyServer, e error) {
-	//TODO implements me
-	log.Debugf("%s fetching proxy info from page for bot", f.UID())
-	// if e = chromedp.Run(parent,
-
-	// )
-	return
-}
-
 //Fetch the proxy info.
 func (f SpysOne) Fetch(parent context.Context, urlIdx int, url string) (ps []*types.ProxyServer, e error) {
 

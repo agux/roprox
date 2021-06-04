@@ -8,7 +8,7 @@ import (
 )
 
 //Xroxy fetches proxy server from https://www.xroxy.com
-type Xroxy struct{
+type Xroxy struct {
 	defaultFetcherSpec
 }
 
@@ -60,15 +60,22 @@ func (f Xroxy) ScanItem(i, urlIdx int, s *goquery.Selection) (ps *types.ProxySer
 		//skip promotion row
 		return
 	}
-	stype := strings.TrimSpace(s.Find("td:nth-child(4) a").Text())
+	stype := strings.TrimSpace(s.Find("td:nth-child(3) a").Text())
 	pstype := "http"
 	if strings.EqualFold(stype, "transparent") {
 		return
 	} else if strings.EqualFold(stype, "socks5") {
 		pstype = "socks5"
 	}
-	host := strings.TrimSpace(s.Find("td:nth-child(2) a").Text())
-	port := strings.TrimSpace(s.Find("td:nth-child(3) a").Text())
-	ps = types.NewProxyServer(f.UID(), host, port, pstype, "")
+	host := strings.TrimSpace(s.Find("td:nth-child(1) a").Text())
+	if len(host) <= 0 {
+		return
+	}
+	port := strings.TrimSpace(s.Find("td:nth-child(2) a").Text())
+	loc := strings.TrimSpace(s.Find("td:nth-child(5) a").Text())
+	if len(host) <= 0 || len(port) <= 0 {
+		return
+	}
+	ps = types.NewProxyServer(f.UID(), host, port, pstype, loc)
 	return
 }

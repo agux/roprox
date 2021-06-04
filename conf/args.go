@@ -67,6 +67,7 @@ type Arguments struct {
 			Headless        bool   `mapstructure:"headless"`
 			RefreshInterval int    `mapstructure:"refresh_interval"`
 			Retry           int    `mapstructure:"retry"`
+			HomePageTimeout int    `mapstructure:"homepage_timeout"`
 		}
 	}
 

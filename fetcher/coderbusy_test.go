@@ -6,18 +6,18 @@ import (
 	"github.com/agux/roprox/types"
 )
 
-func TestFetchData5u(t *testing.T) {
+func TestCoderBusy(t *testing.T) {
 	chpx := make(chan *types.ProxyServer, 100)
 	suc := false
 	go func() {
 		for px := range chpx {
-			log.Debugf("found proxy: %+v", px)
+			log.Debugf("extracted proxy: %+v", px)
 			suc = true
 		}
 	}()
-	p := &Data5u{}
-	for i, url := range p.Urls() {
-		fetchFor(i, url, chpx, p)
+	gp := &CoderBusy{}
+	for i, url := range gp.Urls() {
+		fetchFor(i, url, chpx, gp)
 	}
 	if !suc {
 		t.Fail()

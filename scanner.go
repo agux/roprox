@@ -67,6 +67,7 @@ func collectProxyServer(wgs *sync.WaitGroup, chpx <-chan *t.ProxyServer) {
 	size := 32
 	bucket := make([]*t.ProxyServer, 0, size)
 	ticker := time.NewTicker(time.Second * 5)
+out:
 	for {
 		select {
 		case <-ticker.C:
@@ -88,7 +89,7 @@ func collectProxyServer(wgs *sync.WaitGroup, chpx <-chan *t.ProxyServer) {
 					saveProxyServer(bucket)
 					bucket = nil
 				}
-				break
+				break out
 			}
 		}
 	}

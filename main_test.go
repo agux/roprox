@@ -1,6 +1,7 @@
 package main
 
 import (
+	"strings"
 	"sync"
 	"testing"
 
@@ -31,4 +32,8 @@ func Test_ProbeLocal(t *testing.T) {
 	ch <- types.NewProxyServer("GatherProxy", "47.94.220.11", "3128", "http", "")
 	probeLocal(ch)
 	wg.Wait()
+}
+
+func Test_Title(t *testing.T) {
+	log.Debugf("Title: %s", strings.Title("potential non-compliance"))
 }

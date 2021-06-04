@@ -8,7 +8,7 @@ import (
 )
 
 //CNProxy fetches proxy server from http://cn-proxy.com/
-type CNProxy struct{
+type CNProxy struct {
 	defaultFetcherSpec
 }
 
@@ -21,7 +21,7 @@ func (f CNProxy) UID() string {
 func (f CNProxy) Urls() []string {
 	return []string{
 		`http://cn-proxy.com/`,
-		`http://cn-proxy.com/archives/218`,
+		// `http://cn-proxy.com/archives/218`,
 	}
 }
 
@@ -39,8 +39,8 @@ func (f CNProxy) ProxyMode() types.ProxyMode {
 //ListSelector returns the jQuery selector for searching the proxy server list/table.
 func (f CNProxy) ListSelector() []string {
 	return []string{
-		`#post-4 div div:nth-child(17) table tbody tr`,
-		`#post-218 div.col-mid div.entry-content table:nth-child(8) tbody tr`,
+		`#w1 table tbody tr`,
+		// `#post-218 div.col-mid div.entry-content table:nth-child(8) tbody tr`,
 	}
 }
 
@@ -51,12 +51,13 @@ func (f CNProxy) RefreshInterval() int {
 
 //ScanItem process each item found in the table determined by ListSelector().
 func (f CNProxy) ScanItem(i, urlIdx int, s *goquery.Selection) (ps *types.ProxyServer) {
-	anon := strings.TrimSpace(s.Find("td:nth-child(3)").Text())
-	if strings.Contains(anon, "透明") {
-		return
-	}
+	// anon := strings.TrimSpace(s.Find("td:nth-child(3)").Text())
+	// if strings.Contains(anon, "透明") {
+	// 	return
+	// }
 	host := strings.TrimSpace(s.Find("td:nth-child(1)").Text())
 	port := strings.TrimSpace(s.Find("td:nth-child(2)").Text())
-	ps = types.NewProxyServer(f.UID(), host, port, "http", "")
+	loc := strings.TrimSpace(s.Find("td:nth-child(3)").Text())
+	ps = types.NewProxyServer(f.UID(), host, port, "http", loc)
 	return
 }
