@@ -225,7 +225,7 @@ func (f HideMyName) Fetch(ctx context.Context, urlIdx int, url string) (ps []*ty
 		log.Debugf("flipping to page #%d", i+1)
 
 		if e = chromedp.Run(ctx,
-			chromedp.ScrollIntoView(selNextPage),
+			chromedp.ScrollIntoView(`body div.wrap div.services_proxylist.services div div.pagination`),
 			chromedp.Click(selNextPage),
 			chromedp.WaitReady(selNextTable),
 			chromedp.OuterHTML(`html`, &html),

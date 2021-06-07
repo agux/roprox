@@ -20,7 +20,8 @@ func TestFetch_SpysOne(t *testing.T) {
 			log.Tracef("extracted proxy: %+v", px)
 		}
 	}()
-	gp := &SpysOne{[]string{`http://spys.one/free-proxy-list/CN/`}}
+	// gp := &SpysOne{[]string{`http://spys.one/free-proxy-list/CN/`}}
+	gp := &SpysOne{}
 	// gp := &SpysOne{}
 	for i, url := range gp.Urls() {
 		fetchFor(i, url, chpx, gp)

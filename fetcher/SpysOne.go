@@ -2,7 +2,9 @@ package fetcher
 
 import (
 	"context"
+	"fmt"
 	"net"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -41,6 +43,7 @@ func (f SpysOne) Urls() []string {
 		`http://spys.one/asia-proxy/`,
 		`http://spys.one/en/anonymous-proxy-list/`,
 		`http://spys.one/en/socks-proxy-list/`,
+		`http://spys.one/en/http-proxy-list/`,
 	}
 }
 
@@ -60,7 +63,7 @@ func (f SpysOne) Headless() bool {
 	return conf.Args.DataSource.SpysOne.Headless
 }
 
-//check if it shows the ban page
+//isBanned check if it shows the ban page
 func (f SpysOne) isBanned(parent context.Context) (b bool, e error) {
 	ctx, c := context.WithTimeout(parent, time.Second*5)
 	defer c()
@@ -125,9 +128,8 @@ func (f SpysOne) Fetch(parent context.Context, urlIdx int, url string) (ps []*ty
 	// }
 
 	if e = chromedp.Run(parent,
-		chromedp.WaitReady(`body > table:nth-child(3) > tbody > tr:nth-child(5) > td > table`),
-		chromedp.WaitReady(`body > table:nth-child(3) > tbody > tr:nth-child(5) > td `+
-			`> table > tbody > tr:nth-child(30)`),
+		chromedp.WaitReady(`body > table:nth-child(3) > tbody > tr:nth-child(4) > td > table`),
+		chromedp.WaitReady(`body > table:nth-child(3) > tbody > tr:nth-child(4) > td > table > tbody > tr:nth-child(30)`),
 	); e != nil {
 		return ps, errors.Wrapf(e, "failed to wait page refresh")
 	}
@@ -136,26 +138,22 @@ func (f SpysOne) Fetch(parent context.Context, urlIdx int, url string) (ps []*ty
 		return
 	}
 
-	typeSel := `body > table:nth-child(3) > tbody > tr:nth-child(5) ` +
-		`> td > table > tbody > tr > td:nth-child(2) > a`
-	if strings.Contains(url, "socks-proxy-list") {
-		typeSel = `body > table:nth-child(3) > tbody > tr:nth-child(5) ` +
-			`> td > table > tbody > tr:not(:nth-child(2)) > td:nth-child(2)`
+	var startRow int
+	if startRow, e = f.findStartingRow(parent); e != nil {
+		return
 	}
-	anonSel := `body > table:nth-child(3) > tbody > tr:nth-child(5) > td > table > tbody > tr > td:nth-child(3) > a > font`
-	locSel := `body > table:nth-child(3) > tbody > tr:nth-child(5) > td > table > tbody > tr:nth-child(n+3) > td:nth-child(4)`
-	if strings.Contains(url, "http://spys.one/free-proxy-list/CN") ||
-		strings.Contains(url, "http://spys.one/asia-proxy/") {
-		anonSel = `body > table:nth-child(3) > tbody > tr:nth-child(5) > td > table > tbody > tr:nth-child(n+4) > td:nth-child(3)`
-		locSel = `body > table:nth-child(3) > tbody > tr:nth-child(5) > td > table > tbody > tr:nth-child(n+4) > td:nth-child(4)`
-	}
+
+	baseSel := `body > table:nth-child(3) > tbody > tr:nth-child(4) > td > table > tbody > tr:nth-child(n+%d) > td:nth-child(%d)`
+	ipPortSel := fmt.Sprintf(baseSel, startRow, 1)
+	typeSel := fmt.Sprintf(baseSel, startRow, 2)
+	anonSel := fmt.Sprintf(baseSel, startRow, 3)
+	locSel := fmt.Sprintf(baseSel, startRow, 4)
 
 	if e = chromedp.Run(parent,
 		// chromedp.WaitReady(fmt.Sprintf(`body > table:nth-child(3) > tbody > tr:nth-child(5) > td `+
 		// 	`> table > tbody > tr:nth-child(%d)`, max)),
 		//get ip and port
-		chromedp.Evaluate(jsGetText(`body > table:nth-child(3) > tbody > tr:nth-child(5) `+
-			`> td > table > tbody > tr > td:nth-child(1) > font.spy14`), &ipPort),
+		chromedp.Evaluate(jsGetText(ipPortSel), &ipPort),
 		//get types
 		chromedp.Evaluate(jsGetText(typeSel), &ts),
 		//get anonymity
@@ -167,6 +165,29 @@ func (f SpysOne) Fetch(parent context.Context, urlIdx int, url string) (ps []*ty
 	}
 
 	return f.parse(ipPort, ts, anon, locations), nil
+}
+
+func (f SpysOne) findStartingRow(ctx context.Context) (startRow int, e error) {
+	baseSel := `body > table:nth-child(3) > tbody > tr:nth-child(4) > td > table > tbody > tr:nth-child(%d)`
+	ipPortPattern := `\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}:\d{1,5}`
+	re := regexp.MustCompile(ipPortPattern)
+	var rowStr string
+	for i := 1; i <= 10; i++ {
+		sel := fmt.Sprintf(baseSel, i)
+		if e = chromedp.Run(ctx,
+			chromedp.Text(sel, &rowStr),
+		); e != nil {
+			e = errors.Wrapf(e, `failed to get row string with selector "%s"`, sel)
+			return
+		}
+		log.Debugf("row#%d string: %s", i, rowStr)
+		if re.MatchString(rowStr) {
+			startRow = i
+			return
+		}
+	}
+	e = errors.Wrapf(e, `failed to match ip:port anchor string with base selector "%s"`, baseSel)
+	return
 }
 
 //parses the selected values into proxy server instances
