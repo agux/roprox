@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
-	"math"
 	"path/filepath"
 	"reflect"
 	"strings"
@@ -14,7 +13,6 @@ import (
 	"github.com/agux/roprox/types"
 	"github.com/agux/roprox/util"
 	"github.com/chromedp/cdproto/dom"
-	"github.com/chromedp/cdproto/emulation"
 	"github.com/chromedp/cdproto/page"
 	"github.com/chromedp/chromedp"
 	"github.com/chromedp/chromedp/kb"
@@ -151,76 +149,76 @@ func dumpHTML(ctx context.Context, filename string) (e error) {
 	return
 }
 
-func forceViewportEmulation(ctx context.Context) (contentSize *dom.Rect, e error) {
-	e = chromedp.Run(ctx,
-		chromedp.ActionFunc(func(ctx context.Context) (err error) {
-			// get layout metrics
-			_, _, contentSize, err = page.GetLayoutMetrics().Do(ctx)
-			if err != nil {
-				return errors.Wrapf(err, "failed to get layout metrics")
-			}
+// func forceViewportEmulation(ctx context.Context) (contentSize *dom.Rect, e error) {
+// 	e = chromedp.Run(ctx,
+// 		chromedp.ActionFunc(func(ctx context.Context) (err error) {
+// 			// get layout metrics
+// 			_, _, contentSize, err = page.GetLayoutMetrics().Do(ctx)
+// 			if err != nil {
+// 				return errors.Wrapf(err, "failed to get layout metrics")
+// 			}
 
-			width, height := int64(math.Ceil(contentSize.Width)), int64(math.Ceil(contentSize.Height))
+// 			width, height := int64(math.Ceil(contentSize.Width)), int64(math.Ceil(contentSize.Height))
 
-			// force viewport emulation
-			err = emulation.SetDeviceMetricsOverride(width, height, 1, false).
-				WithScreenOrientation(&emulation.ScreenOrientation{
-					Type:  emulation.OrientationTypePortraitPrimary,
-					Angle: 0,
-				}).
-				Do(ctx)
-			if err != nil {
-				return errors.Wrapf(err, "failed to force viewport emulation")
-			}
+// 			// force viewport emulation
+// 			err = emulation.SetDeviceMetricsOverride(width, height, 1, false).
+// 				WithScreenOrientation(&emulation.ScreenOrientation{
+// 					Type:  emulation.OrientationTypePortraitPrimary,
+// 					Angle: 0,
+// 				}).
+// 				Do(ctx)
+// 			if err != nil {
+// 				return errors.Wrapf(err, "failed to force viewport emulation")
+// 			}
 
-			return nil
-		}),
-	)
-	return
-}
+// 			return nil
+// 		}),
+// 	)
+// 	return
+// }
 
-func captureScreen(ctx context.Context, filename string, quality int) (e error) {
-	var contentSize *dom.Rect
-	if contentSize, e = forceViewportEmulation(ctx); e != nil {
-		return
-	}
+// func captureScreen(ctx context.Context, filename string, quality int) (e error) {
+// 	var contentSize *dom.Rect
+// 	if contentSize, e = forceViewportEmulation(ctx); e != nil {
+// 		return
+// 	}
 
-	buf := make([]byte, 0, 1024)
-	bufptr := &buf
-	// capture entire browser viewport, returning png with quality=90
-	if e = chromedp.Run(ctx,
-		chromedp.ActionFunc(func(ctx context.Context) (err error) {
-			// capture screenshot
-			*bufptr, err = page.CaptureScreenshot().
-				WithQuality(int64(quality)).
-				WithClip(&page.Viewport{
-					X:      contentSize.X,
-					Y:      contentSize.Y,
-					Width:  contentSize.Width,
-					Height: contentSize.Height,
-					Scale:  1,
-				}).Do(ctx)
-			if err != nil {
-				return errors.Wrapf(err, "failed to capture screenshot for the page")
-			}
-			return nil
-		}),
-	); e != nil {
-		return errors.Wrapf(e, "failed to capture screen")
-	}
-	imgPath := filepath.Join(
-		conf.Args.WebDriver.WorkingFolder,
-		fmt.Sprintf("%s_%s.png", filename, time.Now().Format("20060102_150405")),
-	)
-	if e = ioutil.WriteFile(
-		imgPath,
-		buf,
-		0644); e != nil {
-		return errors.Wrapf(e, "unable to save image to %s", imgPath)
-	}
+// 	buf := make([]byte, 0, 1024)
+// 	bufptr := &buf
+// 	// capture entire browser viewport, returning png with quality=90
+// 	if e = chromedp.Run(ctx,
+// 		chromedp.ActionFunc(func(ctx context.Context) (err error) {
+// 			// capture screenshot
+// 			*bufptr, err = page.CaptureScreenshot().
+// 				WithQuality(int64(quality)).
+// 				WithClip(&page.Viewport{
+// 					X:      contentSize.X,
+// 					Y:      contentSize.Y,
+// 					Width:  contentSize.Width,
+// 					Height: contentSize.Height,
+// 					Scale:  1,
+// 				}).Do(ctx)
+// 			if err != nil {
+// 				return errors.Wrapf(err, "failed to capture screenshot for the page")
+// 			}
+// 			return nil
+// 		}),
+// 	); e != nil {
+// 		return errors.Wrapf(e, "failed to capture screen")
+// 	}
+// 	imgPath := filepath.Join(
+// 		conf.Args.WebDriver.WorkingFolder,
+// 		fmt.Sprintf("%s_%s.png", filename, time.Now().Format("20060102_150405")),
+// 	)
+// 	if e = ioutil.WriteFile(
+// 		imgPath,
+// 		buf,
+// 		0644); e != nil {
+// 		return errors.Wrapf(e, "unable to save image to %s", imgPath)
+// 	}
 
-	return
-}
+// 	return
+// }
 
 // waitPageLoaded blocks until a target receives a Page.loadEventFired.
 func waitPageLoaded(ctx context.Context) error {
@@ -250,7 +248,7 @@ func waitPageLoaded(ctx context.Context) error {
 	}
 }
 
-func allocatorOptions(fspec types.FetcherSpec) (o []chromedp.ExecAllocatorOption, rpx *types.ProxyServer){
+func allocatorOptions(fspec types.FetcherSpec) (o []chromedp.ExecAllocatorOption, rpx *types.ProxyServer) {
 	proxyMode := fspec.ProxyMode()
 	df := fspec.(types.DynamicHTMLFetcher)
 	switch proxyMode {
