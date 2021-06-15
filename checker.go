@@ -6,6 +6,7 @@ import (
 
 	"github.com/agux/roprox/conf"
 	"github.com/agux/roprox/data"
+	"github.com/agux/roprox/network"
 	"github.com/agux/roprox/types"
 	"github.com/agux/roprox/util"
 )
@@ -123,7 +124,7 @@ func probeLocal(chjobs <-chan *types.ProxyServer) {
 		go func() {
 			for ps := range chjobs {
 				var e error
-				if util.ValidateProxy(ps.Type, ps.Host, ps.Port,
+				if network.ValidateProxy(ps.Type, ps.Host, ps.Port,
 					`http://www.baidu.com`, "#wrapper", conf.Args.LocalProbeTimeout) {
 					_, e = data.DB.Exec(`update proxy_list set status = ?, `+
 						`suc = suc+1, score = suc/(suc+fail)*100, `+
@@ -149,7 +150,7 @@ func probeGlobal(ch <-chan *types.ProxyServer) {
 		go func() {
 			for ps := range ch {
 				var e error
-				if util.ValidateProxy(ps.Type, ps.Host, ps.Port,
+				if network.ValidateProxy(ps.Type, ps.Host, ps.Port,
 					`http://www.google.com`, `#tsf`, conf.Args.GlobalProbeTimeout) {
 					_, e = data.DB.Exec(`update proxy_list set status_g = ?, `+
 						`suc_g = suc_g+1, score_g = suc_g/(suc_g+fail_g)*100, `+

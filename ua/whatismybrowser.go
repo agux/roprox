@@ -1,17 +1,17 @@
-package util
+package ua
 
 import (
 	"archive/tar"
 	"compress/gzip"
+	"database/sql"
 	"encoding/csv"
 	"fmt"
 	"io"
-	"math/rand"
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/agux/roprox/conf"
@@ -20,82 +20,68 @@ import (
 	"github.com/ssgreg/repeat"
 )
 
-var (
-	agentPool []string
-	uaLock    = sync.RWMutex{}
-)
-
-//PickUserAgent picks a user agent string from the pool randomly.
-//if the pool is not populated, it will trigger the initialization process
-//to fetch user agent lists from remote server.
-func PickUserAgent() (ua string, e error) {
-	uaLock.Lock()
-	defer uaLock.Unlock()
-
-	if len(agentPool) > 0 {
-		return agentPool[rand.Intn(len(agentPool))], nil
-	}
-	//first, load from database
-	agents := loadUserAgents()
-	refresh := false
-	if len(agents) != 0 {
-		var latest time.Time
-		latest, e = time.Parse(DateTimeFormat, agents[0].UpdatedAt)
-		if e != nil {
-			return
-		}
-		if time.Now().Sub(latest).Hours() >=
-			float64(time.Duration(conf.Args.DataSource.UserAgentLifespan*24)*time.Hour) {
-			refresh = true
-		}
-	}
-	//if none, or outdated, refresh table from remote server
-	if refresh || len(agents) == 0 {
-		//download sample file and load into database server
-		log.Info("fetching user agent list from remote server...")
-		exePath, e := os.Executable()
-		if e != nil {
-			log.Panicln("failed to get executable path", e)
-		}
-		path, e := filepath.EvalSymlinks(exePath)
-		if e != nil {
-			log.Panicln("failed to evaluate symlinks, ", exePath, e)
-		}
-		local := filepath.Join(filepath.Dir(path), filepath.Base(conf.Args.DataSource.UserAgents))
-		if _, e := os.Stat(local); e == nil {
-			os.Remove(local)
-		}
-		e = downloadFile(local, conf.Args.DataSource.UserAgents)
-		defer os.Remove(local)
-		if e != nil {
-			log.Panicln("failed to download user agent sample file ", conf.Args.DataSource.UserAgents, e)
-		}
-		agents, e = readCSV(local)
-		if e != nil {
-			log.Panicln("failed to download and read csv, ", local, e)
-		}
-		mergeAgents(agents)
-		log.Infof("successfully fetched %d user agents from remote server.", len(agentPool))
-		//reload agents from database
-		agents = loadUserAgents()
-	}
-	for _, a := range agents {
-		agentPool = append(agentPool, a.UserAgent)
-	}
-	return agentPool[rand.Intn(len(agentPool))], nil
+type whatIsMyBrowser struct {
 }
 
-func loadUserAgents() (agents []*types.UserAgent) {
-	_, e := data.DB.Select(&agents, "select * from user_agents where hardware_type = ? order by updated_at desc", "computer")
+func (w whatIsMyBrowser) urlMatch(url string) (matched bool) {
+	prefix := "https://developers.whatismybrowser.com/"
+	return strings.HasPrefix(strings.ToLower(url), prefix)
+}
+
+func (w whatIsMyBrowser) outdated(agents []*types.UserAgent) (outdated bool, e error) {
+	if len(agents) == 0 || !agents[0].UpdatedAt.Valid {
+		outdated = true
+		return
+	}
+	var latest time.Time
+	latest, e = time.Parse(dateTimeFormat, agents[0].UpdatedAt.String)
 	if e != nil {
-		if "sql: no rows in result set" != e.Error() {
+		return
+	}
+	if time.Since(latest).Hours() >=
+		float64(time.Duration(conf.Args.DataSource.UserAgentLifespan*24)*time.Hour) {
+		outdated = true
+	}
+	return
+}
+
+func (w whatIsMyBrowser) get() (agents []*types.UserAgent, err error) {
+	exePath, e := os.Executable()
+	if e != nil {
+		log.Panicln("failed to get executable path", e)
+	}
+	path, e := filepath.EvalSymlinks(exePath)
+	if e != nil {
+		log.Panicln("failed to evaluate symlinks, ", exePath, e)
+	}
+	local := filepath.Join(filepath.Dir(path), filepath.Base(conf.Args.DataSource.UserAgents))
+	if _, e := os.Stat(local); e == nil {
+		os.Remove(local)
+	}
+	e = w.downloadFile(local, conf.Args.DataSource.UserAgents)
+	defer os.Remove(local)
+	if e != nil {
+		log.Panicln("failed to download user agent sample file ", conf.Args.DataSource.UserAgents, e)
+	}
+	agents, e = w.readCSV(local)
+	if e != nil {
+		log.Panicln("failed to download and read csv, ", local, e)
+	}
+	w.mergeAgents(agents)
+	return
+}
+
+func (w whatIsMyBrowser) load() (agents []*types.UserAgent, e error) {
+	_, e = data.DB.Select(&agents, "select * from user_agents where hardware_type = ? order by updated_at desc", "computer")
+	if e != nil {
+		if e.Error() != "sql: no rows in result set" {
 			log.Panicln("failed to run sql", e)
 		}
 	}
 	return
 }
 
-func mergeAgents(agents []*types.UserAgent) (e error) {
+func (w whatIsMyBrowser) mergeAgents(agents []*types.UserAgent) (e error) {
 	fields := []string{
 		"id", "user_agent", "times_seen", "simple_software_string", "software_name", "software_version", "software_type",
 		"software_sub_type", "hardware_type", "first_seen_at", "last_seen_at", "updated_at",
@@ -126,7 +112,7 @@ func mergeAgents(agents []*types.UserAgent) (e error) {
 
 	var updFieldStr []string
 	for _, f := range fields {
-		if "id" == f {
+		if f == "id" {
 			continue
 		}
 		updFieldStr = append(updFieldStr, fmt.Sprintf("%[1]s=values(%[1]s)", f))
@@ -152,7 +138,7 @@ func mergeAgents(agents []*types.UserAgent) (e error) {
 	return
 }
 
-func readCSV(src string) (agents []*types.UserAgent, err error) {
+func (w whatIsMyBrowser) readCSV(src string) (agents []*types.UserAgent, err error) {
 	f, err := os.Open(src)
 	if err != nil {
 		return
@@ -200,19 +186,26 @@ func readCSV(src string) (agents []*types.UserAgent, err error) {
 				//skip header line
 				continue
 			}
+			var id, times_seen int64
+			if id, err = strconv.ParseInt(ln[0], 10, 64); err != nil {
+				return
+			}
+			if times_seen, err = strconv.ParseInt(ln[2], 10, 64); err != nil {
+				return
+			}
 			agents = append(agents, &types.UserAgent{
-				ID:                   ln[0],
-				UserAgent:            ln[1],
-				TimesSeen:            ln[2],
-				SimpleSoftwareString: ln[3],
-				SoftwareName:         ln[7],
-				SoftwareVersion:      ln[10],
-				SoftwareType:         ln[22],
-				SoftwareSubType:      ln[23],
-				HardWareType:         ln[25],
-				FirstSeenAt:          ln[35],
-				LastSeenAt:           ln[36],
-				UpdatedAt:            Now(),
+				ID:                   int(id),
+				UserAgent:            sql.NullString{String: ln[1], Valid: true},
+				TimesSeen:            sql.NullInt64{Int64: times_seen, Valid: true},
+				SimpleSoftwareString: sql.NullString{String: ln[3], Valid: true},
+				SoftwareName:         sql.NullString{String: ln[7], Valid: true},
+				SoftwareVersion:      sql.NullString{String: ln[10], Valid: true},
+				SoftwareType:         sql.NullString{String: ln[22], Valid: true},
+				SoftwareSubType:      sql.NullString{String: ln[23], Valid: true},
+				HardWareType:         sql.NullString{String: ln[25], Valid: true},
+				FirstSeenAt:          sql.NullString{String: ln[35], Valid: true},
+				LastSeenAt:           sql.NullString{String: ln[36], Valid: true},
+				UpdatedAt:            sql.NullString{String: time.Now().Format(dateTimeFormat), Valid: true},
 			})
 		}
 		break
@@ -220,7 +213,7 @@ func readCSV(src string) (agents []*types.UserAgent, err error) {
 	return
 }
 
-func downloadFile(filepath string, url string) (err error) {
+func (w whatIsMyBrowser) downloadFile(filepath string, url string) (err error) {
 
 	// Create the file
 	out, err := os.Create(filepath)

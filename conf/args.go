@@ -54,6 +54,7 @@ type Arguments struct {
 
 	DataSource struct {
 		UserAgents        string `mapstructure:"user_agents"`
+		UserAgentsTimeout int    `mapstructure:"user_agents_timeout"`
 		UserAgentLifespan int    `mapstructure:"user_agent_lifespan"`
 
 		SpysOne struct {
@@ -77,6 +78,7 @@ type Arguments struct {
 		Schema   string `mapstructure:"schema"`
 		UserName string `mapstructure:"user_name"`
 		Password string `mapstructure:"password"`
+		MaxRetry int    `mapstructure:"max_retry"`
 	}
 }
 

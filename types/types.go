@@ -2,6 +2,7 @@ package types
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"time"
@@ -128,18 +129,20 @@ type DynamicHTMLFetcher interface {
 
 //UserAgent represents user_agent table structure.
 type UserAgent struct {
-	ID                   string
-	UserAgent            string `db:"user_agent"`
-	TimesSeen            string `db:"times_seen"`
-	SimpleSoftwareString string `db:"simple_software_string"`
-	SoftwareName         string `db:"software_name"`
-	SoftwareVersion      string `db:"software_version"`
-	SoftwareType         string `db:"software_type"`
-	SoftwareSubType      string `db:"software_sub_type"`
-	HardWareType         string `db:"hardware_type"`
-	FirstSeenAt          string `db:"first_seen_at"`
-	LastSeenAt           string `db:"last_seen_at"`
-	UpdatedAt            string `db:"updated_at"`
+	ID                   int             `db:"id"`
+	Source               sql.NullString  `db:"source"`
+	UserAgent            sql.NullString  `db:"user_agent"`
+	TimesSeen            sql.NullInt64   `db:"times_seen"`
+	Percent              sql.NullFloat64 `db:"percent"`
+	SimpleSoftwareString sql.NullString  `db:"simple_software_string"`
+	SoftwareName         sql.NullString  `db:"software_name"`
+	SoftwareVersion      sql.NullString  `db:"software_version"`
+	SoftwareType         sql.NullString  `db:"software_type"`
+	SoftwareSubType      sql.NullString  `db:"software_sub_type"`
+	HardWareType         sql.NullString  `db:"hardware_type"`
+	FirstSeenAt          sql.NullString  `db:"first_seen_at"`
+	LastSeenAt           sql.NullString  `db:"last_seen_at"`
+	UpdatedAt            sql.NullString  `db:"updated_at"`
 }
 
 func (ua *UserAgent) String() string {

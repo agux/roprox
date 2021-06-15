@@ -1,4 +1,4 @@
-package util
+package network
 
 import (
 	"fmt"
@@ -10,6 +10,7 @@ import (
 
 	"github.com/agux/roprox/conf"
 	"github.com/agux/roprox/types"
+	"github.com/agux/roprox/ua"
 	"github.com/pkg/errors"
 	"github.com/ssgreg/repeat"
 	"golang.org/x/net/proxy"
@@ -156,7 +157,7 @@ func HTTPGetResponse(link string, headers map[string]string, useMasterProxy, rot
 		req.Header.Set("Upgrade-Insecure-Requests", "1")
 		uagent := ""
 		if rotateAgent {
-			uagent, e = PickUserAgent()
+			uagent, e = ua.PickUserAgent()
 			if e != nil {
 				log.Errorln("failed to acquire rotate user agent", e)
 				time.Sleep(time.Millisecond * time.Duration(300+rand.Intn(300)))

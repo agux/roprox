@@ -16,9 +16,9 @@ import (
 	//shorten type reference
 
 	"github.com/agux/roprox/conf"
+	"github.com/agux/roprox/network"
 	"github.com/agux/roprox/types"
 	t "github.com/agux/roprox/types"
-	"github.com/agux/roprox/util"
 	"golang.org/x/text/encoding/simplifiedchinese"
 	"golang.org/x/text/transform"
 )
@@ -118,7 +118,7 @@ func fetchStaticHTML(urlIdx int, url string, chpx chan<- *t.ProxyServer, fspec t
 
 	selectors := htmlFetcher.ListSelector()
 	sel := ""
-	res, e := util.HTTPGetResponse(url, nil, fspec.ProxyMode() == types.MasterProxy, true)
+	res, e := network.HTTPGetResponse(url, nil, fspec.ProxyMode() == types.MasterProxy, true)
 	if e != nil {
 		log.Errorf("failed to get free proxy list from %s, giving up %+v", url, e)
 		return
@@ -161,7 +161,7 @@ func fetchStaticHTML(urlIdx int, url string, chpx chan<- *t.ProxyServer, fspec t
 }
 
 func fetchJSON(urlIdx int, url string, chpx chan<- *t.ProxyServer, fspec t.FetcherSpec) (c int) {
-	res, e := util.HTTPGetResponse(url, nil, fspec.ProxyMode() == types.MasterProxy, true)
+	res, e := network.HTTPGetResponse(url, nil, fspec.ProxyMode() == types.MasterProxy, true)
 	if e != nil {
 		log.Errorf("failed to get free proxy list from %s, giving up %+v", url, e)
 		return
@@ -182,7 +182,7 @@ func fetchJSON(urlIdx int, url string, chpx chan<- *t.ProxyServer, fspec t.Fetch
 }
 
 func fetchPlainText(urlIdx int, url string, chpx chan<- *t.ProxyServer, fspec t.FetcherSpec) (c int) {
-	res, e := util.HTTPGetResponse(url, nil, fspec.ProxyMode() == types.MasterProxy, true)
+	res, e := network.HTTPGetResponse(url, nil, fspec.ProxyMode() == types.MasterProxy, true)
 	if e != nil {
 		log.Errorf("failed to get free proxy list from %s, giving up %+v", url, e)
 		return
@@ -224,9 +224,9 @@ func updateProxyScore(fspec t.FetcherSpec, rpx *t.ProxyServer, suc bool) {
 	if rpx != nil {
 		switch fspec.ProxyMode() {
 		case t.RotateGlobalProxy:
-			util.UpdateProxyScoreGlobal(rpx, false)
+			network.UpdateProxyScoreGlobal(rpx, false)
 		case t.RotateProxy:
-			util.UpdateProxyScore(rpx, false)
+			network.UpdateProxyScore(rpx, false)
 		}
 	}
 }

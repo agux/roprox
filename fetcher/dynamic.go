@@ -10,8 +10,9 @@ import (
 	"time"
 
 	"github.com/agux/roprox/conf"
+	"github.com/agux/roprox/network"
 	"github.com/agux/roprox/types"
-	"github.com/agux/roprox/util"
+	"github.com/agux/roprox/ua"
 	"github.com/chromedp/cdproto/dom"
 	"github.com/chromedp/cdproto/page"
 	"github.com/chromedp/chromedp"
@@ -258,7 +259,7 @@ func allocatorOptions(fspec types.FetcherSpec) (o []chromedp.ExecAllocatorOption
 		o = append(o, chromedp.ProxyServer(p))
 	case types.RotateProxy:
 		var e error
-		if rpx, e = util.PickProxy(); e != nil {
+		if rpx, e = network.PickProxy(); e != nil {
 			log.Fatalf("%s unable to pick rotate proxy: %+v", fspec.UID(), e)
 			return
 		}
@@ -267,7 +268,7 @@ func allocatorOptions(fspec types.FetcherSpec) (o []chromedp.ExecAllocatorOption
 		o = append(o, chromedp.ProxyServer(p))
 	case types.RotateGlobalProxy:
 		var e error
-		if rpx, e = util.PickGlobalProxy(); e != nil {
+		if rpx, e = network.PickGlobalProxy(); e != nil {
 			log.Fatalf("%s unable to pick global rotate proxy: %+v", fspec.UID(), e)
 			return
 		}
@@ -276,7 +277,7 @@ func allocatorOptions(fspec types.FetcherSpec) (o []chromedp.ExecAllocatorOption
 		o = append(o, chromedp.ProxyServer(p))
 	}
 	if types.Direct != proxyMode {
-		if ua, e := util.PickUserAgent(); e != nil {
+		if ua, e := ua.PickUserAgent(); e != nil {
 			log.Fatalf("failed to pick user agents from the pool: %+v", e)
 		} else {
 			o = append(o, chromedp.UserAgent(ua))

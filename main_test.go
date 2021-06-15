@@ -20,7 +20,7 @@ func Test_ProbeGlobal(t *testing.T) {
 	ch := make(chan *types.ProxyServer, 16)
 	var wg sync.WaitGroup
 	wg.Add(1)
-	ch <- types.NewProxyServer("SpyesOne", "47.112.35.4", "1080", "socks5", "")
+	ch <- types.NewProxyServer("Vultr", "127.0.0.1", "1087", "socks5", "")
 	probeGlobal(ch)
 	wg.Wait()
 }

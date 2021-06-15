@@ -1,4 +1,4 @@
-package util
+package network
 
 import (
 	"fmt"
@@ -14,6 +14,7 @@ import (
 	"github.com/agux/roprox/conf"
 	"github.com/agux/roprox/data"
 	"github.com/agux/roprox/types"
+	"github.com/agux/roprox/ua"
 	"github.com/pkg/errors"
 	"golang.org/x/net/proxy"
 )
@@ -83,7 +84,7 @@ func ValidateProxy(stype, host, port, link, targetID string, probeTimeout int) b
 	req.Header.Set("Host", link)
 	req.Header.Set("Pragma", "no-cache")
 	req.Header.Set("Upgrade-Insecure-Requests", "1")
-	uagent, e := PickUserAgent()
+	uagent, e := ua.PickUserAgent()
 	if e != nil {
 		log.Errorln("failed to acquire rotate user agent, using default value", e)
 		uagent = conf.Args.Network.DefaultUserAgent
