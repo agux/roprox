@@ -14,7 +14,7 @@ var Args Arguments
 
 var vp *viper.Viper
 
-//Arguments arguments struct type
+// Arguments arguments struct type
 type Arguments struct {
 	LogLevel               string  `mapstructure:"log_level"`
 	ScannerPoolSize        int     `mapstructure:"scanner_pool_size"`
@@ -73,8 +73,10 @@ type Arguments struct {
 	}
 
 	Database struct {
+		DbType   string `mapstructure:"type"`
 		Host     string `mapstructure:"host"`
 		Port     int    `mapstructure:"port"`
+		Path     string `mapstructure:"path"`
 		Schema   string `mapstructure:"schema"`
 		UserName string `mapstructure:"user_name"`
 		Password string `mapstructure:"password"`

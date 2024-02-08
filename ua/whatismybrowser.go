@@ -104,7 +104,7 @@ func (w whatIsMyBrowser) mergeAgents(agents []*types.UserAgent) (e error) {
 		valueArgs = append(valueArgs, a.SoftwareVersion)
 		valueArgs = append(valueArgs, a.SoftwareType)
 		valueArgs = append(valueArgs, a.SoftwareSubType)
-		valueArgs = append(valueArgs, a.HardWareType)
+		valueArgs = append(valueArgs, a.HardwareType)
 		valueArgs = append(valueArgs, a.FirstSeenAt)
 		valueArgs = append(valueArgs, a.LastSeenAt)
 		valueArgs = append(valueArgs, a.UpdatedAt)
@@ -202,7 +202,7 @@ func (w whatIsMyBrowser) readCSV(src string) (agents []*types.UserAgent, err err
 				SoftwareVersion:      sql.NullString{String: ln[10], Valid: true},
 				SoftwareType:         sql.NullString{String: ln[22], Valid: true},
 				SoftwareSubType:      sql.NullString{String: ln[23], Valid: true},
-				HardWareType:         sql.NullString{String: ln[25], Valid: true},
+				HardwareType:         sql.NullString{String: ln[25], Valid: true},
 				FirstSeenAt:          sql.NullString{String: ln[35], Valid: true},
 				LastSeenAt:           sql.NullString{String: ln[36], Valid: true},
 				UpdatedAt:            sql.NullString{String: time.Now().Format(dateTimeFormat), Valid: true},

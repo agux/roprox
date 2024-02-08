@@ -3,23 +3,46 @@ package data
 import (
 	"database/sql"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/agux/roprox/conf"
 	"github.com/agux/roprox/logging"
-	"github.com/go-gorp/gorp"
+	"github.com/agux/roprox/types"
 
-	//the mysql driver
+	//FIXME to be obsolete
+	"gopkg.in/gorp.v2"
+	"gorm.io/gorm"
+
+	//the sqlite embed db driver
+	_ "github.com/glebarez/go-sqlite"
+	"gorm.io/driver/sqlite"
+
+	//import mysql driver
 	_ "github.com/go-sql-driver/mysql"
 )
 
 var (
 	//DB the database instance
-	DB  *gorp.DbMap
-	log = logging.Logger
+	DB     *gorp.DbMap
+	GormDB *gorm.DB
+	log    = logging.Logger
 )
 
 func init() {
+	// improve the following switch to match case-insensitive
+	switch strings.ToLower(conf.Args.Database.DbType) {
+	case "mysql":
+		initMySQL()
+	case "sqlite":
+		initSQLite()
+	default:
+		log.Panic("unsupported database type. please check 'conf.Args.Database.Type' in configuration file: ",
+			conf.Args.Database.DbType)
+	}
+}
+
+func initMySQL() {
 	// connect to db using standard Go database/sql API
 	// use whatever database/sql driver you wish
 	// db, err := sql.Open("mysql", "tcp:localhost:3306*secu/mysql/123456")
@@ -43,5 +66,19 @@ func init() {
 	err = mysql.Ping()
 	if err != nil {
 		log.Panic("Failed to ping db", err)
+	}
+}
+
+func initSQLite() {
+	var err error
+
+	// Initialize GORM with the SQLite database.
+	GormDB, err = gorm.Open(sqlite.Open(conf.Args.Database.Path), &gorm.Config{})
+	if err != nil {
+		log.Panicln("gorm.Open() failed", err)
+	}
+
+	if err = GormDB.AutoMigrate(&types.ProxyServer{}, &types.UserAgent{}); err != nil {
+		log.Panicln("GORM auto migrate failure", err)
 	}
 }

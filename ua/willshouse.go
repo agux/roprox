@@ -166,7 +166,7 @@ func (w willsHouse) mergeAgents(agents []*types.UserAgent) (e error) {
 		valueArgs = append(valueArgs, a.SoftwareVersion)
 		valueArgs = append(valueArgs, a.SoftwareType)
 		valueArgs = append(valueArgs, a.SoftwareSubType)
-		valueArgs = append(valueArgs, a.HardWareType)
+		valueArgs = append(valueArgs, a.HardwareType)
 		valueArgs = append(valueArgs, a.FirstSeenAt)
 		valueArgs = append(valueArgs, a.LastSeenAt)
 		valueArgs = append(valueArgs, a.UpdatedAt)

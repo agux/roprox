@@ -9,6 +9,7 @@ import (
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/agux/roprox/logging"
+	"gorm.io/gorm"
 )
 
 var log = logging.Logger
@@ -35,23 +36,26 @@ const (
 	DateTimeFormat = "2006-01-02 15:04:05"
 )
 
-//ProxyServer is a model mapping for database table proxy_list
+// ProxyServer is a model mapping for database table proxy_list
 type ProxyServer struct {
-	Source      string
-	Host        string
-	Port        string
-	Type        string
+	gorm.Model
+
+	ID          uint
+	Source      string `gorm:"index:idx_source"`
+	Host        string `gorm:"uniqueIndex:idx_host_port;index:idx_status"`
+	Port        string `gorm:"uniqueIndex:idx_host_port;index:idx_status"`
+	Type        string `gorm:"index:idx_status"`
 	Loc         string
-	Status      string
+	Status      string `gorm:"index:idx_last_check;index:idx_status"`
 	Suc         int
-	Fail        int
+	Fail        int `gorm:"index:idx_status"`
 	Score       float64
 	StatusG     string  `db:"status_g"`
 	SucG        int     `db:"suc_g"`
 	FailG       int     `db:"fail_g"`
 	ScoreG      float64 `db:"score_g"`
-	LastCheck   string  `db:"last_check"`
-	LastScanned string  `db:"last_scanned"`
+	LastCheck   string  `db:"last_check" gorm:"index:idx_last_check"`
+	LastScanned string  `db:"last_scanned" gorm:"index:idx_source"`
 }
 
 func (p *ProxyServer) String() string {
@@ -62,7 +66,7 @@ func (p *ProxyServer) String() string {
 	return fmt.Sprintf("%v", string(j))
 }
 
-//NewProxyServer creates an instance of ProxyServer.
+// NewProxyServer creates an instance of ProxyServer.
 func NewProxyServer(source, host, port, ptype, loc string) *ProxyServer {
 	return &ProxyServer{
 		Source:  source,
@@ -79,7 +83,7 @@ func NewProxyServer(source, host, port, ptype, loc string) *ProxyServer {
 	}
 }
 
-//FetcherSpec defines detail specifications on fetching open proxy servers from the web.
+// FetcherSpec defines detail specifications on fetching open proxy servers from the web.
 type FetcherSpec interface {
 	//UID returns the unique identifier for this spec.
 	UID() string
@@ -96,7 +100,7 @@ type FetcherSpec interface {
 	Retry() int
 }
 
-//JSONFetcher parses target url as JSON payload
+// JSONFetcher parses target url as JSON payload
 type JSONFetcher interface {
 	//ParseJSON parses JSON payload and extracts proxy information
 	ParseJSON(payload []byte) (ps []*ProxyServer)
@@ -107,7 +111,7 @@ type PlainTextFetcher interface {
 	ParsePlainText(payload []byte) (ps []*ProxyServer)
 }
 
-//StaticHTMLFetcher fetches target url by parsing static HTML content
+// StaticHTMLFetcher fetches target url by parsing static HTML content
 type StaticHTMLFetcher interface {
 	//IsGBK returns wheter the web page is GBK encoded.
 	IsGBK() bool
@@ -117,7 +121,7 @@ type StaticHTMLFetcher interface {
 	ScanItem(itemIdx, urlIdx int, s *goquery.Selection) (ps *ProxyServer)
 }
 
-//DynamicHTMLFetcher fetches target url by using web driver
+// DynamicHTMLFetcher fetches target url by using web driver
 type DynamicHTMLFetcher interface {
 	//Fetch the proxy info
 	Fetch(parent context.Context, urlIdx int, url string) (ps []*ProxyServer, e error)
@@ -127,8 +131,10 @@ type DynamicHTMLFetcher interface {
 	HomePageTimeout() int
 }
 
-//UserAgent represents user_agent table structure.
+// UserAgent represents user_agent table structure.
 type UserAgent struct {
+	gorm.Model
+
 	ID                   int             `db:"id"`
 	Source               sql.NullString  `db:"source"`
 	UserAgent            sql.NullString  `db:"user_agent"`
@@ -139,7 +145,7 @@ type UserAgent struct {
 	SoftwareVersion      sql.NullString  `db:"software_version"`
 	SoftwareType         sql.NullString  `db:"software_type"`
 	SoftwareSubType      sql.NullString  `db:"software_sub_type"`
-	HardWareType         sql.NullString  `db:"hardware_type"`
+	HardwareType         sql.NullString  `db:"hardware_type"`
 	FirstSeenAt          sql.NullString  `db:"first_seen_at"`
 	LastSeenAt           sql.NullString  `db:"last_seen_at"`
 	UpdatedAt            sql.NullString  `db:"updated_at"`
