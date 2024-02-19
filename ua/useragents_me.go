@@ -140,7 +140,7 @@ func (uam userAgentsMe) assignID(agents []*types.UserAgent) (maxID int64, e erro
 }
 
 func (uam userAgentsMe) mergeAgents(agents []*types.UserAgent) (e error) {
-
+	//FIXME: record not updated
 	if _, e = uam.assignID(agents); e != nil {
 		return
 	}

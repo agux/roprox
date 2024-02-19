@@ -23,21 +23,20 @@ func check(wg *sync.WaitGroup) {
 
 func evictBrokenServers() {
 	log.Debug("evicting broken servers...")
-	delete := `delete from proxy_list where status = ? and score <= ? ` +
-		`and status_g = ? and score_g <= ? ` +
-		`and last_scanned <= ? `
-	r, e := data.DB.Exec(delete, types.FAIL, conf.Args.EvictionScoreThreshold,
+	delete := `
+		delete from proxy_servers where status = ? and score <= ? 
+			and status_g = ? and score_g <= ? 
+			and last_scanned <= ? 
+	`
+	db := data.GormDB.Exec(delete, types.FAIL, conf.Args.EvictionScoreThreshold,
 		types.FAIL, conf.Args.EvictionScoreThreshold,
 		time.Now().Add(-time.Duration(conf.Args.EvictionTimeout)*time.Second).Format(util.DateTimeFormat))
+	e := db.Error
 	if e != nil {
 		log.Errorln("failed to evict broken proxy servers", e)
 		return
 	}
-	ra, e := r.RowsAffected()
-	if e != nil {
-		log.Errorf("unable to get rows affected after eviction: %+v", e)
-		return
-	}
+	ra := db.RowsAffected
 	log.Infof("%d broken servers evicted", ra)
 }
 
@@ -73,15 +72,14 @@ func queryServersForLocal(ch chan<- *types.ProxyServer) {
 	query := `SELECT 
 					*
 				FROM
-					proxy_list
+					proxy_servers
 				WHERE
 					status = ?
 					or (last_check <= ? and (suc > 0 or fail <= ?))
 					order by last_check`
-	_, e := data.DB.Select(&list, query, types.UNK,
+	e := data.GormDB.Raw(query, types.UNK,
 		time.Now().Add(-time.Duration(conf.Args.LocalProbeInterval)*time.Second).Format(util.DateTimeFormat),
-		conf.Args.LocalProbeRetry,
-	)
+		conf.Args.LocalProbeRetry).Scan(&list).Error
 	if e != nil {
 		log.Errorln("failed to query proxy servers for local probe", e)
 		return
@@ -99,15 +97,14 @@ func queryServersForGlobal(ch chan<- *types.ProxyServer) {
 	query := `SELECT 
 					*
 				FROM
-					proxy_list
+					proxy_servers
 				WHERE
 					status_g = ?
 					or (last_check <= ? and (suc_g > 0 or fail_g <= ?))
 					order by last_check`
-	_, e := data.DB.Select(&list, query, types.UNK,
+	e := data.GormDB.Raw(query, types.UNK,
 		time.Now().Add(-time.Duration(conf.Args.GlobalProbeInterval)*time.Second).Format(util.DateTimeFormat),
-		conf.Args.GlobalProbeRetry,
-	)
+		conf.Args.GlobalProbeRetry).Scan(&list).Error
 	if e != nil {
 		log.Errorln("failed to query proxy servers for global probe", e)
 		return
@@ -126,15 +123,15 @@ func probeLocal(chjobs <-chan *types.ProxyServer) {
 				var e error
 				if network.ValidateProxy(ps.Type, ps.Host, ps.Port,
 					`http://www.baidu.com`, "#wrapper", conf.Args.LocalProbeTimeout) {
-					_, e = data.DB.Exec(`update proxy_list set status = ?, `+
-						`suc = suc+1, score = suc/(suc+fail)*100, `+
-						`last_check = ? where host = ? and port = ?`,
-						types.OK, util.Now(), ps.Host, ps.Port)
+					e = data.GormDB.Exec(`update proxy_servers set status = ?, `+
+						`suc = suc+1, score = (suc+1)/(suc+1+fail)*100, `+
+						`last_check = ? where id = ?`,
+						types.OK, util.Now(), ps.ID).Error
 				} else {
-					_, e = data.DB.Exec(`update proxy_list set status = ?, `+
-						`fail = fail+1, score = suc/(suc+fail)*100, `+
-						`last_check = ? where host = ? and port = ?`,
-						types.FAIL, util.Now(), ps.Host, ps.Port)
+					e = data.GormDB.Exec(`update proxy_servers set status = ?, `+
+						`fail = fail+1, score = suc/(suc+fail+1)*100, `+
+						`last_check = ? where id = ?`,
+						types.FAIL, util.Now(), ps.ID).Error
 				}
 				if e != nil {
 					log.Errorln("failed to update proxy server score", e)
@@ -152,15 +149,15 @@ func probeGlobal(ch <-chan *types.ProxyServer) {
 				var e error
 				if network.ValidateProxy(ps.Type, ps.Host, ps.Port,
 					`http://www.google.com`, `#tsf`, conf.Args.GlobalProbeTimeout) {
-					_, e = data.DB.Exec(`update proxy_list set status_g = ?, `+
-						`suc_g = suc_g+1, score_g = suc_g/(suc_g+fail_g)*100, `+
-						`last_check = ? where host = ? and port = ?`,
-						types.OK, util.Now(), ps.Host, ps.Port)
+					e = data.GormDB.Exec(`update proxy_servers set status_g = ?, `+
+						`suc_g = suc_g+1, score_g = (suc_g+1)/(suc_g+1+fail_g)*100, `+
+						`last_check = ? where id = ?`,
+						types.OK, util.Now(), ps.ID).Error
 				} else {
-					_, e = data.DB.Exec(`update proxy_list set status_g = ?, `+
-						`fail_g = fail_g+1, score_g = suc_g/(suc_g+fail_g)*100, `+
-						`last_check = ? where host = ? and port = ?`,
-						types.FAIL, util.Now(), ps.Host, ps.Port)
+					e = data.GormDB.Exec(`update proxy_servers set status_g = ?, `+
+						`fail_g = fail_g+1, score_g = suc_g/(suc_g+fail_g+1)*100, `+
+						`last_check = ? where id = ?`,
+						types.FAIL, util.Now(), ps.ID).Error
 				}
 				if e != nil {
 					log.Errorln("failed to update proxy server score", e)

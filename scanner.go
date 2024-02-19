@@ -1,9 +1,7 @@
 package main
 
 import (
-	"fmt"
 	"math/rand"
-	"strings"
 	"sync"
 	"time"
 
@@ -11,6 +9,7 @@ import (
 	"github.com/agux/roprox/data"
 	"github.com/agux/roprox/fetcher"
 	t "github.com/agux/roprox/types"
+	"gorm.io/gorm/clause"
 )
 
 func scan(wg *sync.WaitGroup) {
@@ -100,40 +99,50 @@ func saveProxyServer(bucket []*t.ProxyServer) {
 		return
 	}
 
-	valueStrings := make([]string, 0, len(bucket))
-	valueArgs := make([]interface{}, 0, len(bucket)*9)
-	for _, el := range bucket {
-		valueStrings = append(valueStrings, "(?, ?, ?, ?, ?, ?, ?, ?, ?)")
-		valueArgs = append(valueArgs, el.Source)
-		valueArgs = append(valueArgs, el.Host)
-		valueArgs = append(valueArgs, el.Port)
-		valueArgs = append(valueArgs, el.Type)
-		valueArgs = append(valueArgs, el.Loc)
-		valueArgs = append(valueArgs, el.Status)
-		valueArgs = append(valueArgs, el.StatusG)
-		valueArgs = append(valueArgs, el.LastCheck)
-		valueArgs = append(valueArgs, el.LastScanned)
-	}
-	stmt := fmt.Sprintf("INSERT IGNORE INTO proxy_list ("+
-		"source,host,port,type,loc,status,status_g,last_check,last_scanned) VALUES %s",
-		// "on duplicate key update status=values(status),last_check=values(last_check),last_scanned=values(last_scanned)",
-		strings.Join(valueStrings, ","))
-	retry := 10
-	rt := 0
-	for ; rt < retry; rt++ {
-		_, err := data.DB.Exec(stmt, valueArgs...)
-		if err != nil {
-			log.Warn(err)
-			if strings.Contains(err.Error(), "Deadlock") {
-				continue
-			} else {
-				log.Errorln("failed to update proxy_list", err)
-				break
-			}
-		}
-		break
-	}
-	if rt >= retry {
-		log.Errorln("failed to update proxy_list")
+	if err := data.GormDB.Clauses(clause.OnConflict{DoNothing: true}).CreateInBatches(bucket, 32).Error; err != nil {
+		log.Errorf("failed to insert/update proxy server: %v", err)
 	}
 }
+
+// func saveProxyServer(bucket []*t.ProxyServer) {
+// 	if len(bucket) == 0 {
+// 		return
+// 	}
+
+// 	valueStrings := make([]string, 0, len(bucket))
+// 	valueArgs := make([]interface{}, 0, len(bucket)*9)
+// 	for _, el := range bucket {
+// 		valueStrings = append(valueStrings, "(?, ?, ?, ?, ?, ?, ?, ?, ?)")
+// 		valueArgs = append(valueArgs, el.Source)
+// 		valueArgs = append(valueArgs, el.Host)
+// 		valueArgs = append(valueArgs, el.Port)
+// 		valueArgs = append(valueArgs, el.Type)
+// 		valueArgs = append(valueArgs, el.Loc)
+// 		valueArgs = append(valueArgs, el.Status)
+// 		valueArgs = append(valueArgs, el.StatusG)
+// 		valueArgs = append(valueArgs, el.LastCheck)
+// 		valueArgs = append(valueArgs, el.LastScanned)
+// 	}
+// 	stmt := fmt.Sprintf("INSERT IGNORE INTO proxy_list ("+
+// 		"source,host,port,type,loc,status,status_g,last_check,last_scanned) VALUES %s",
+// 		// "on duplicate key update status=values(status),last_check=values(last_check),last_scanned=values(last_scanned)",
+// 		strings.Join(valueStrings, ","))
+// 	retry := 10
+// 	rt := 0
+// 	for ; rt < retry; rt++ {
+// 		_, err := data.DB.Exec(stmt, valueArgs...)
+// 		if err != nil {
+// 			log.Warn(err)
+// 			if strings.Contains(err.Error(), "Deadlock") {
+// 				continue
+// 			} else {
+// 				log.Errorln("failed to update proxy_list", err)
+// 				break
+// 			}
+// 		}
+// 		break
+// 	}
+// 	if rt >= retry {
+// 		log.Errorln("failed to update proxy_list")
+// 	}
+// }

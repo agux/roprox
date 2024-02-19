@@ -21,13 +21,14 @@ func main() {
 		logrus.Exit(code)
 	}()
 
-	log.Info("roprox starting...")
 	log.Infof("config file used: %s", conf.ConfigFileUsed())
+	log.Infof("roprox starting on port %d", conf.Args.Proxy.Port)
 
 	var wg sync.WaitGroup
-	wg.Add(2)
 
+	wg.Add(3)
 	go scan(&wg)
+	go serve(&wg)
 	go check(&wg)
 
 	wg.Wait()

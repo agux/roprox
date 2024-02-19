@@ -36,7 +36,7 @@ const (
 	DateTimeFormat = "2006-01-02 15:04:05"
 )
 
-// ProxyServer is a model mapping for database table proxy_list
+// ProxyServer is a model mapping for database table proxy_servers
 type ProxyServer struct {
 	gorm.Model
 
@@ -56,6 +56,10 @@ type ProxyServer struct {
 	ScoreG      float64 `db:"score_g"`
 	LastCheck   string  `db:"last_check" gorm:"index:idx_last_check"`
 	LastScanned string  `db:"last_scanned" gorm:"index:idx_source"`
+}
+
+func (p *ProxyServer) UrlString() string {
+	return fmt.Sprintf("%s://%s:%s", p.Type, p.Host, p.Port)
 }
 
 func (p *ProxyServer) String() string {

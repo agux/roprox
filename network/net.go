@@ -19,7 +19,7 @@ import (
 	"golang.org/x/net/proxy"
 )
 
-//DomainOf the specified url.
+// DomainOf the specified url.
 func DomainOf(url string) (domain string) {
 	r := regexp.MustCompile(`//([^/]*)/`).FindStringSubmatch(url)
 	if len(r) > 0 {
@@ -28,7 +28,7 @@ func DomainOf(url string) (domain string) {
 	return
 }
 
-//ValidateProxy checks the status of remote listening port, and further checks if it's a valid proxy server
+// ValidateProxy checks the status of remote listening port, and further checks if it's a valid proxy server
 func ValidateProxy(stype, host, port, link, targetID string, probeTimeout int) bool {
 	timeout := time.Second * time.Duration(probeTimeout)
 	addr := net.JoinHostPort(host, port)
@@ -39,11 +39,11 @@ func ValidateProxy(stype, host, port, link, targetID string, probeTimeout int) b
 		}
 	}()
 	if err != nil {
-		log.Warnf("%s failed: %+v", addr, err)
+		log.Tracef("proxy validation failed [%s]: %+v", addr, err)
 		return false
 	}
 	if conn == nil {
-		log.Warnf("%s timed out", addr)
+		log.Tracef("proxy validation timed out [%s]", addr)
 		return false
 	}
 	conn.Close()
@@ -93,36 +93,37 @@ func ValidateProxy(stype, host, port, link, targetID string, probeTimeout int) b
 
 	res, err := client.Do(req)
 	if err != nil {
-		log.Warnf("%s failed to visit validation site: %+v", addr, err)
+		log.Tracef("%s failed to visit validation site: %+v", addr, err)
 		return false
 	}
 	defer res.Body.Close()
 
 	doc, e := goquery.NewDocumentFromReader(res.Body)
 	if e != nil {
-		log.Warnf("%s failed to read validation site's response body: %+v", addr, e)
+		log.Tracef("%s failed to read validation site's response body: %+v", addr, e)
 		return false
 	}
 	size := doc.Find(targetID).Size()
 	if size > 0 {
-		log.Debugf("%s success", addr)
+		log.Tracef("%s success", addr)
 		return true
 	}
-	log.Warnf("%s failed to identify target on validation site", addr)
+	log.Tracef("%s failed to identify target on validation site", addr)
 	return false
 }
 
-//PickProxy randomly chooses a proxy from database.
+// PickProxy randomly chooses a proxy from database.
 func PickProxy() (proxy *types.ProxyServer, e error) {
 	proxyList := make([]*types.ProxyServer, 0, 64)
 	query := `
 		SELECT 
 			*
 		FROM
-			proxy_list
+			proxy_servers
 		WHERE
-			score >= ?`
-	_, e = data.DB.Select(&proxyList, query, conf.Args.Network.RotateProxyScoreThreshold)
+			score >= ?
+	`
+	e = data.GormDB.Raw(query, conf.Args.Network.RotateProxyScoreThreshold).Scan(&proxyList).Error
 	if e != nil {
 		log.Println("failed to query proxy server from database", e)
 		return proxy, errors.WithStack(e)
@@ -136,17 +137,18 @@ func PickProxy() (proxy *types.ProxyServer, e error) {
 	return proxyList[rand.Intn(len(proxyList))], nil
 }
 
-//PickGlobalProxy randomly chooses a global proxy from database.
+// PickGlobalProxy randomly chooses a global proxy from database.
 func PickGlobalProxy() (proxy *types.ProxyServer, e error) {
 	proxyList := make([]*types.ProxyServer, 0, 64)
 	query := `
 		SELECT 
 			*
 		FROM
-			proxy_list
+			proxy_servers
 		WHERE
-			score_g >= ?`
-	_, e = data.DB.Select(&proxyList, query, conf.Args.Network.RotateProxyGlobalScoreThreshold)
+			score_g >= ?
+	`
+	e = data.GormDB.Raw(query, conf.Args.Network.RotateProxyGlobalScoreThreshold).Scan(&proxyList).Error
 	if e != nil {
 		log.Println("failed to query global proxy server from database", e)
 		return proxy, errors.WithStack(e)

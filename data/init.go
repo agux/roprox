@@ -24,7 +24,7 @@ import (
 
 var (
 	//DB the database instance
-	DB     *gorp.DbMap
+	DB     *gorp.DbMap // TO BE DEPRECATED
 	GormDB *gorm.DB
 	log    = logging.Logger
 )
@@ -80,5 +80,14 @@ func initSQLite() {
 
 	if err = GormDB.AutoMigrate(&types.ProxyServer{}, &types.UserAgent{}); err != nil {
 		log.Panicln("GORM auto migrate failure", err)
+	}
+
+	// Execute PRAGMA statements.
+	if err = GormDB.Exec("PRAGMA synchronous = OFF").Error; err != nil {
+		log.Panicln("failed to execute 'PRAGMA synchronous = OFF' ", err)
+	}
+
+	if err = GormDB.Exec("PRAGMA journal_mode = WAL").Error; err != nil {
+		log.Panicln("failed to execute 'PRAGMA journal_mode = WAL' ", err)
 	}
 }

@@ -44,6 +44,12 @@ type Arguments struct {
 		RotateProxyGlobalScoreThreshold float64 `mapstructure:"rotate_proxy_global_score_threshold"`
 	}
 
+	Proxy struct {
+		Port             int  `mapstructure:"port"`
+		BindUserAgent    bool `mapstructure:"bind_user_agent"`
+		MemCacheLifespan int  `mapstructure:"mem_cache_lifespan"`
+	}
+
 	WebDriver struct {
 		Timeout       int    `mapstructure:"timeout"`
 		Headless      bool   `mapstructure:"headless"`
@@ -89,7 +95,7 @@ func init() {
 	setDefaults()
 	vp.SetConfigName("roprox") // name of config file (without extension)
 	gopath := os.Getenv("GOPATH")
-	if "" == gopath {
+	if gopath == "" {
 		gopath = build.Default.GOPATH
 	}
 	vp.AddConfigPath(filepath.Join(gopath, "bin"))

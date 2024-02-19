@@ -11,6 +11,7 @@ import (
 var uaFetcherList = []userAgentFetcher{
 	whatIsMyBrowser{},
 	willsHouse{},
+	userAgentsMe{},
 }
 
 var log = logging.Logger
