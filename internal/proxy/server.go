@@ -131,9 +131,8 @@ func handleClient(client net.Conn) {
 
 	// If method is CONNECT, we're dealing with HTTPS
 	if request.Method == http.MethodConnect {
-		handleTunneling(cw, request, client, ps)
+		handleTunneling(request, client, ps)
 	} else {
-		// TODO: Handle regular HTTP requests here, such as accessing HTTP target endpoint
 		handleHttpRequest(cw, request, ps)
 	}
 
@@ -151,7 +150,9 @@ func handleHttpRequest(cw http.ResponseWriter, req *http.Request, ps *types.Prox
 			http.Error(cw, emsg, http.StatusInternalServerError)
 			return
 		}
-		transport = &http.Transport{Proxy: http.ProxyURL(proxyURL)}
+		transport = &http.Transport{
+			Proxy: http.ProxyURL(proxyURL),
+		}
 	} else {
 		dialer, err := proxy.SOCKS5("tcp", fmt.Sprintf("%s:%s", ps.Host, ps.Port), nil, proxy.Direct)
 		if err != nil {
@@ -165,7 +166,11 @@ func handleHttpRequest(cw http.ResponseWriter, req *http.Request, ps *types.Prox
 		}
 	}
 
-	// req.URL.Scheme = "http" // or "https" depending on your needs
+	transport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+
+	if req.URL.Scheme == "" {
+		req.URL.Scheme = "https"
+	}
 	req.RequestURI = "" // Request.RequestURI can't be set in client requests
 	req.URL.Host = req.Host
 	req.Header.Set("User-Agent", selectUserAgent(ps.UrlString()))
@@ -197,122 +202,59 @@ func handleHttpRequest(cw http.ResponseWriter, req *http.Request, ps *types.Prox
 	cw.Write(body)
 }
 
-func handleTunneling(cw http.ResponseWriter, req *http.Request, client net.Conn, ps *types.ProxyServer) {
-	//TODO: need to modify the user-agent inside the request header
-	newReq := intercept(cw, req, client, ps)
+func handleTunneling(req *http.Request, client net.Conn, ps *types.ProxyServer) {
+	var newReq *http.Request
+	var newConn *tls.Conn
+	var e error
 
-	if strings.HasPrefix(ps.Type, "http") {
-		httpProxy(cw, req, client, ps)
-	} else {
-		socks5Proxy(cw, req, client, ps)
+	if newReq, newConn, e = intercept(req, client, ps); e != nil {
+		log.Errorf("Error intercepting request: %+v", e)
+		return
 	}
+	defer newConn.Close()
+
+	// Create our custom ResponseWriter
+	cw := NewConnResponseWriter(newConn)
+
+	handleHttpRequest(cw, newReq, ps)
 }
 
-func intercept(cw http.ResponseWriter, req *http.Request, client net.Conn, ps *types.ProxyServer) (newReq *http.Request) {
-	destHost := req.URL.Host
-	// Certificate generation and TLS configuration setup should go here.
+func intercept(req *http.Request, client net.Conn, ps *types.ProxyServer) (newReq *http.Request, newConn *tls.Conn, e error) {
+	hostName := req.URL.Hostname()
 
-	if cert.Generate(commonName string, nil, conf.Args.Proxy.SSLCertificateFolder)
-
-	// Hijack the connection to perform a TLS handshake.
-	tlsConn := tls.Server(client, tlsConfig)
-	if err := tlsConn.Handshake(); err != nil {
-		log.Printf("TLS handshake error: %v\n", err)
-		return
+	var certificate tls.Certificate
+	var found bool
+	if certificate, found = certStore[hostName]; !found {
+		if certificate, e = cert.LoadOrGenerate(hostName); e != nil {
+			return
+		}
+		certStore[hostName] = certificate
 	}
 
-	// Now, you have a decrypted connection with the client.
-	// You can read requests, modify them, and write responses.
-
-	// At this point, you would perform your decryption of client requests,
-	// modification of headers, and re-encryption before forwarding to serverConn.
-
-	// Similarly, you would decrypt server responses, modify them if needed,
-	// and re-encrypt before sending them back to the client.
-
-}
-
-func socks5Proxy(cw http.ResponseWriter, req *http.Request, client net.Conn, ps *types.ProxyServer) {
-	endpoint := req.URL.Host
-	// Dial the SOCKS5 proxy
-	dialer, err := proxy.SOCKS5("tcp", fmt.Sprintf("%s:%s", ps.Host, ps.Port), nil, proxy.Direct)
-	if err != nil {
-		log.Errorf("Error creating SOCKS5 dialer: %v\n", err)
-		return
-	}
-
-	// Connect to the target endpoint through the SOCKS5 proxy
-	server, err := dialer.Dial("tcp", endpoint)
-	if err != nil {
-		log.Errorf("Error connecting to endpoint through SOCKS5 proxy: %v\n", err)
-		return
-	}
-	defer server.Close()
-
-	// Inform the client that the connection is established
-	_, err = client.Write([]byte("HTTP/1.1 200 Connection established\r\n\r\n"))
-	if err != nil {
-		log.Errorf("Error sending connection confirmation: %v\n", err)
-		return
-	}
-
-	// Start tunneling - bidirectional copy
-	go io.Copy(server, client)
-	io.Copy(client, server)
-}
-
-func httpProxy(cw http.ResponseWriter, req *http.Request, client net.Conn, ps *types.ProxyServer) {
-	endpoint := req.URL.Host
-	// Parse the third-party proxy URL
-	proxyUrl, err := url.Parse(ps.UrlString())
-	if err != nil {
-		log.Errorf("Error parsing proxy URL: %v\n", err)
-		return
-	}
-
-	// Dial the third-party proxy
-	// set a timeout before net.Dial
-	// set a timeout before net.Dial
-	connTimeout := time.Duration(conf.Args.LocalProbeTimeout) * time.Second
-	proxyConn, err := net.DialTimeout("tcp", proxyUrl.Host, connTimeout)
-	if err != nil {
-		log.Errorf("Error connecting to third-party proxy: %v\n", err)
-		return
-	}
-	defer proxyConn.Close()
-
-	// Send a CONNECT request to the third-party proxy
-	connectReq := fmt.Sprintf("CONNECT %s HTTP/1.1\r\nHost: %s\r\n\r\n", endpoint, endpoint)
-	_, err = proxyConn.Write([]byte(connectReq))
-	if err != nil {
-		log.Errorf("Error sending CONNECT request to proxy: %v\n", err)
-		return
-	}
-
-	// Read the response from the proxy
-	proxyReader := bufio.NewReader(proxyConn)
-	resp, err := http.ReadResponse(proxyReader, nil)
-	if err != nil {
-		log.Errorf("Error reading response from proxy: %v\n", err)
-		return
-	}
-	resp.Body.Close()
-
-	// Check if the proxy connection was successful
-	if resp.StatusCode != 200 {
-		log.Errorf("Non-200 status code from proxy: %d\n", resp.StatusCode)
-		return
+	tlsConfig := &tls.Config{
+		Certificates:       []tls.Certificate{certificate},
+		InsecureSkipVerify: true,
 	}
 
 	// Inform the original client that the tunnel is established
-	_, err = client.Write([]byte("HTTP/1.1 200 Connection established\r\n\r\n"))
-	if err != nil {
-		log.Errorf("Error sending connection confirmation to client: %v\n", err)
+	_, e = client.Write([]byte("HTTP/1.1 200 Connection established\r\n\r\n"))
+	if e != nil {
 		return
 	}
 
-	go io.Copy(proxyConn, client)
-	io.Copy(client, proxyConn)
+	// Hijack the connection to perform a TLS handshake.
+	newConn = tls.Server(client, tlsConfig)
+	if err := newConn.Handshake(); err != nil {
+		log.Errorf("TLS handshake error: %v\n", err)
+		return
+	}
+
+	// read request from tlsConn, replace User-Agent header
+	if newReq, e = http.ReadRequest(bufio.NewReader(newConn)); e != nil {
+		return
+	}
+
+	return
 }
 
 // as a cold start, load the list of proxy servers from database using data.GormDB.
