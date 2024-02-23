@@ -2,6 +2,7 @@ package proxy
 
 import (
 	"bufio"
+	"context"
 	"crypto/tls"
 	"fmt"
 	"io"
@@ -15,13 +16,16 @@ import (
 
 	"github.com/agux/roprox/internal/cert"
 	"github.com/agux/roprox/internal/conf"
-	"github.com/agux/roprox/internal/data"
 	"github.com/agux/roprox/internal/logging"
+	"github.com/agux/roprox/internal/network"
 	"github.com/agux/roprox/internal/types"
+	"github.com/agux/roprox/internal/ua"
+	"github.com/avast/retry-go"
 	"golang.org/x/net/proxy"
 )
 
 var log = logging.Logger
+var masterProxy *types.ProxyServer
 
 // ConnResponseWriter is our custom ResponseWriter that uses net.Conn.
 type ConnResponseWriter struct {
@@ -96,9 +100,13 @@ func Serve(wg *sync.WaitGroup) {
 	}
 	defer listener.Close()
 
-	log.Infof("roprox started successfully.")
+	log.Info("roprox started successfully.")
 
-	//TODO print out # of healthy public proxies in the backend pool
+	num := len(proxyCache.GetData())
+	if num <= 0 {
+		log.Info("currently there's no qualified proxy in the backend. " +
+			"Please wait while the scanner is crawling for public proxy resources.")
+	}
 
 	for {
 		client, err := listener.Accept()
@@ -109,37 +117,57 @@ func Serve(wg *sync.WaitGroup) {
 
 		// Handle each connection in a new goroutine
 		go handleClient(client)
-		//TODO: utilize pooling as guardrail. Add retry mechanism based on timeout
+		//TODO: utilize pooling as guardrail.
 	}
 }
 
 func handleClient(client net.Conn) {
-	defer client.Close()
-
 	// Create our custom ResponseWriter
 	cw := NewConnResponseWriter(client)
+	defer cw.conn.Close()
 
 	request, err := http.ReadRequest(bufio.NewReader(client))
 	if err != nil {
-		emsg := fmt.Sprintf("Error reading request: %v", err)
+		emsg := fmt.Sprintf("Error reading request: %+v", err)
 		log.Error(emsg)
 		http.Error(cw, emsg, http.StatusBadRequest)
 		return
 	}
 
-	ps := selectProxy()
-
-	// If method is CONNECT, we're dealing with HTTPS
+	var e error
+	// If method is CONNECT, we're dealing with HTTPS. This part is not retryable
 	if request.Method == http.MethodConnect {
-		handleTunneling(request, client, ps)
-	} else {
-		handleHttpRequest(cw, request, ps)
+		if request, client, e = intercept(request, client); e != nil {
+			emsg := fmt.Sprintf("Error intercepting request: %+v", err)
+			log.Error(emsg)
+			http.Error(cw, emsg, http.StatusBadRequest)
+		}
+
+		// swap the connection with intercepted connection
+		cw.conn = client
 	}
 
-	//TODO: update proxy score based on result
+	op := func() (e error) {
+		ps := selectProxy()
+		e = handleHttpRequest(cw, request, ps)
+		network.UpdateProxyScore(ps, e == nil)
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(),
+		time.Duration(conf.Args.Proxy.MaxRetryDuration)*time.Second)
+	defer cancel()
+	if e := retry.Do(
+		op,
+		retry.Delay(0),
+		retry.LastErrorOnly(true),
+		retry.Context(ctx),
+	); e != nil {
+		http.Error(cw, e.Error(), http.StatusInternalServerError)
+	}
 }
 
-func handleHttpRequest(cw http.ResponseWriter, req *http.Request, ps *types.ProxyServer) {
+func handleHttpRequest(cw *ConnResponseWriter, req *http.Request, ps *types.ProxyServer) error {
 	var transport http.RoundTripper
 
 	if strings.HasPrefix(ps.Type, "http") {
@@ -147,8 +175,7 @@ func handleHttpRequest(cw http.ResponseWriter, req *http.Request, ps *types.Prox
 		if err != nil {
 			emsg := fmt.Sprintf("Error parsing proxy URL: %s, %+v", ps.UrlString(), err)
 			log.Error(emsg)
-			http.Error(cw, emsg, http.StatusInternalServerError)
-			return
+			return err
 		}
 		transport = &http.Transport{
 			Proxy: http.ProxyURL(proxyURL),
@@ -158,8 +185,7 @@ func handleHttpRequest(cw http.ResponseWriter, req *http.Request, ps *types.Prox
 		if err != nil {
 			emsg := fmt.Sprintf("Error creating SOCKS5 dialer: %+v", err)
 			log.Error(emsg)
-			http.Error(cw, emsg, http.StatusInternalServerError)
-			return
+			return err
 		}
 		transport = &http.Transport{
 			Dial: dialer.Dial,
@@ -171,26 +197,35 @@ func handleHttpRequest(cw http.ResponseWriter, req *http.Request, ps *types.Prox
 	if req.URL.Scheme == "" {
 		req.URL.Scheme = "https"
 	}
+
 	req.RequestURI = "" // Request.RequestURI can't be set in client requests
 	req.URL.Host = req.Host
-	req.Header.Set("User-Agent", selectUserAgent(ps.UrlString()))
 
-	targetClient := &http.Client{Transport: transport}
+	userAgent := conf.Args.Network.DefaultUserAgent
+	if uaVal, found := ua.GetUserAgent(ps.UrlString()); found {
+		userAgent = uaVal
+	} else {
+		log.Warnf("fallback to default User-Agent: %s", userAgent)
+	}
+	req.Header.Set("User-Agent", userAgent)
+
+	targetClient := &http.Client{
+		Timeout:   time.Duration(conf.Args.Proxy.BackendProxyTimeout) * time.Second,
+		Transport: transport,
+	}
 	response, err := targetClient.Do(req)
 	if err != nil {
-		emsg := fmt.Sprintf("Error forwarding request: %+v", err)
+		emsg := fmt.Sprintf("failed to relay request to proxy [%s]: %+v", ps.UrlString(), err)
 		log.Error(emsg)
-		http.Error(cw, emsg, http.StatusInternalServerError)
-		return
+		return err
 	}
 	defer response.Body.Close()
 
 	body, err := io.ReadAll(response.Body)
 	if err != nil {
-		emsg := fmt.Sprintf("Error reading response body: %+v", err)
+		emsg := fmt.Sprintf("Error reading response body from proxy [%s]: %+v", ps.UrlString(), err)
 		log.Error(emsg)
-		http.Error(cw, emsg, http.StatusInternalServerError)
-		return
+		return err
 	}
 
 	for key, values := range response.Header {
@@ -200,26 +235,11 @@ func handleHttpRequest(cw http.ResponseWriter, req *http.Request, ps *types.Prox
 	}
 	cw.WriteHeader(response.StatusCode)
 	cw.Write(body)
+
+	return nil
 }
 
-func handleTunneling(req *http.Request, client net.Conn, ps *types.ProxyServer) {
-	var newReq *http.Request
-	var newConn *tls.Conn
-	var e error
-
-	if newReq, newConn, e = intercept(req, client, ps); e != nil {
-		log.Errorf("Error intercepting request: %+v", e)
-		return
-	}
-	defer newConn.Close()
-
-	// Create our custom ResponseWriter
-	cw := NewConnResponseWriter(newConn)
-
-	handleHttpRequest(cw, newReq, ps)
-}
-
-func intercept(req *http.Request, client net.Conn, ps *types.ProxyServer) (newReq *http.Request, newConn *tls.Conn, e error) {
+func intercept(req *http.Request, client net.Conn) (newReq *http.Request, newConn *tls.Conn, e error) {
 	hostName := req.URL.Hostname()
 
 	var certificate tls.Certificate
@@ -244,12 +264,12 @@ func intercept(req *http.Request, client net.Conn, ps *types.ProxyServer) (newRe
 
 	// Hijack the connection to perform a TLS handshake.
 	newConn = tls.Server(client, tlsConfig)
-	if err := newConn.Handshake(); err != nil {
-		log.Errorf("TLS handshake error: %v\n", err)
+	if e = newConn.Handshake(); e != nil {
+		log.Errorf("TLS handshake error: %v\n", e)
 		return
 	}
 
-	// read request from tlsConn, replace User-Agent header
+	// read request from tlsConn
 	if newReq, e = http.ReadRequest(bufio.NewReader(newConn)); e != nil {
 		return
 	}
@@ -257,56 +277,44 @@ func intercept(req *http.Request, client net.Conn, ps *types.ProxyServer) (newRe
 	return
 }
 
-// as a cold start, load the list of proxy servers from database using data.GormDB.
-// use types.ProxyServer as data model.
-// cache the loaded proxy servers in a string array.
-// It has a lifespan of conf.Args.Proxy.MemCacheLifespan (seconds), after which
-// fresh data shall be loaded from database again.
+// randomly select a proxy from the cache
 func selectProxy() *types.ProxyServer {
 
-	//TODO: value direct:master:rotate proxy weights (from the custom req header?)
+	cache := proxyCache.GetData()
 
-	currentTime := time.Now().Unix()
-	if len(proxyServersCache) == 0 || currentTime-cacheLastUpdated > int64(conf.Args.Proxy.MemCacheLifespan) {
-		proxyServersCache = make([]types.ProxyServer, 0, 16)
-		if err := data.GormDB.Find(
-			&proxyServersCache,
-			"score >= ?",
-			conf.Args.Network.RotateProxyScoreThreshold).Error; err != nil {
-			log.Fatalf("Failed to load proxy servers from database: %v", err)
-		}
-		cacheLastUpdated = currentTime
+	if len(cache) > 0 {
+		//TODO: consider (per request) direct:master:rotate proxy weights (from the custom req header?)
+		// Select a random proxy server from the cache
+		return &cache[rand.Intn(len(cache))]
 	}
 
-	if len(proxyServersCache) == 0 {
-		//TODO: cater fallback_master_proxy config in this case
+	if !conf.Args.Proxy.FallbackMasterProxy {
 		return nil
 	}
 
-	// Select a random proxy server from the cache
-	randomIndex := rand.Intn(len(proxyServersCache))
-	return &proxyServersCache[randomIndex]
-}
+	log.Warnf("no qualified proxy at the moment. falling back to master proxy: %s", conf.Args.Network.MasterProxyAddr)
 
-// Select user agent string based on proxyURL.
-// Employ the userAgentBinding map of structure map[string]string where the proxyURL is key and user-agent string is its value.
-// The map could be empty as lazy-start. In this case, pick a random record using data.GormDB and the model type.UserAgent.
-// It has a field UserAgent denoting the user-agent string.
-// Then stores and cache the randomly selected string together with the proxyURL in the map.
-// We can return the mapped user-agent string without querying the database using GORM next time.
-func selectUserAgent(proxyURL string) string {
-	userAgent, exists := userAgentBinding[proxyURL]
-	if exists {
-		return userAgent
+	// construct a new *types.ProxyServer instance from the `conf.Args.Network.MasterProxyAddr` string.
+	// sample: `http://127.0.0.1:1087`, `socks5://127.0.0.1:1080`
+	// parse the string and assign to corresponding ProxyServer struct attributes as follows:
+	// {Host: "127.0.0.1", Port: "1087", Type: "http"}
+	// {Host: "127.0.0.1", Port: "1080", Type: "socks5"}
+	masterProxy = &types.ProxyServer{ID: 0, Source: "config"}
+	u, err := url.Parse(conf.Args.Network.MasterProxyAddr)
+	if err != nil {
+		log.Errorf("Error parsing master proxy address: %v\n", err)
+		return nil
 	}
-
-	// Assuming data.GormDB is the GORM database instance and type.UserAgent is the model
-	var ua types.UserAgent
-	if err := data.GormDB.Order("random()").First(&ua).Error; err != nil {
-		log.Fatalf("Failed to select random user-agent: %v", err)
-		return ""
+	masterProxy.Host = u.Hostname()
+	masterProxy.Port = u.Port()
+	switch u.Scheme {
+	case "http", "https":
+		masterProxy.Type = u.Scheme
+	case "socks5":
+		masterProxy.Type = "socks5"
+	default:
+		log.Errorf("Unsupported proxy scheme: %s\n", u.Scheme)
+		return nil
 	}
-
-	userAgentBinding[proxyURL] = ua.UserAgent.String
-	return ua.UserAgent.String
+	return masterProxy
 }

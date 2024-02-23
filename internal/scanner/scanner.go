@@ -54,7 +54,7 @@ func launchDispatcher(chjobs chan<- string) {
 }
 
 func launchScanners(chjobs <-chan string, chpx chan<- *t.ProxyServer) {
-	for i := 0; i < conf.Args.ScannerPoolSize; i++ {
+	for i := 0; i < conf.Args.Scanner.PoolSize; i++ {
 		go func() {
 			for uid := range chjobs {
 				fetcher.Fetch(chpx, fetcher.FetcherMap[uid])

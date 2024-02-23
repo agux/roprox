@@ -8,13 +8,16 @@ import (
 	"github.com/ssgreg/repeat"
 )
 
-var uaFetcherList = []userAgentFetcher{
-	whatIsMyBrowser{},
-	willsHouse{},
-	userAgentsMe{},
-}
+var (
+	uaFetcherList = []userAgentFetcher{
+		whatIsMyBrowser{},
+		willsHouse{},
+		userAgentsMe{},
+	}
 
-var log = logging.Logger
+	log     = logging.Logger
+	uaCache *userAgentCache
+)
 
 const dateTimeFormat = "2006-01-02 15:04:05"
 
@@ -38,4 +41,8 @@ func try(op func(int) error, maxRetry int, maxDelay time.Duration) error {
 			repeat.FullJitterBackoff(500*time.Millisecond).WithMaxDelay(maxDelay).Set(),
 		),
 	)
+}
+
+func init() {
+	uaCache = &userAgentCache{}
 }

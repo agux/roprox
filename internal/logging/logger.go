@@ -22,7 +22,7 @@ const (
 )
 
 func init() {
-	switch conf.Args.LogLevel {
+	switch conf.Args.Logging.LogLevel {
 	case "trace":
 		Logger.SetLevel(logrus.TraceLevel)
 	case "debug":

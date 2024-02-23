@@ -24,6 +24,7 @@ require (
 
 require (
 	github.com/andybalholm/cascadia v1.1.0 // indirect
+	github.com/avast/retry-go v3.0.0+incompatible // indirect
 	github.com/chromedp/sysutil v1.0.0 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/fsnotify/fsnotify v1.7.0 // indirect

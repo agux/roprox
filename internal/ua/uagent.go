@@ -3,6 +3,7 @@ package ua
 import (
 	"math/rand"
 	"sync"
+	"time"
 
 	"github.com/agux/roprox/internal/conf"
 	"github.com/agux/roprox/internal/types"
@@ -71,4 +72,56 @@ func PickUserAgent() (ua string, e error) {
 		return
 	}
 	return agentPool[rand.Intn(len(agentPool))], nil
+}
+
+func GetUserAgent(proxyURL string) (string, bool) {
+	return uaCache.GetUserAgent(proxyURL)
+}
+
+type userAgentCache struct {
+	rwMtx            sync.RWMutex
+	upgMtx           sync.Mutex // used during upgrading from read lock to write lock
+	userAgentBinding map[string]string
+	cacheLastUpdated int64
+}
+
+func (cache *userAgentCache) r_lock() {
+	cache.rwMtx.RLock()
+}
+
+func (cache *userAgentCache) r_unlock() {
+	cache.rwMtx.RUnlock()
+}
+
+func (cache *userAgentCache) upgradeToWriteLock() {
+	cache.upgMtx.Lock()   // Ensure that only one goroutine can attempt to upgrade from RLock.
+	cache.rwMtx.RUnlock() // Release the read lock.
+	cache.rwMtx.Lock()    // Acquire the write lock.
+}
+
+func (cache *userAgentCache) downgradeAndUnlock() {
+	cache.rwMtx.Unlock()  // Release the write lock.
+	cache.upgMtx.Unlock() // Release the upgradeMutex to allow other upgrades.
+}
+
+func (cache *userAgentCache) GetUserAgent(proxyURL string) (string, bool) {
+	cache.r_lock()
+	if cache.userAgentBinding == nil {
+		cache.userAgentBinding = make(map[string]string)
+	}
+	if value, ok := cache.userAgentBinding[proxyURL]; ok {
+		cache.r_unlock()
+		return value, true
+	} else {
+		cache.upgradeToWriteLock()
+		defer cache.downgradeAndUnlock()
+		currentTime := time.Now().Unix()
+		if ua, e := PickUserAgent(); e != nil {
+			return "", false
+		} else {
+			cache.userAgentBinding[proxyURL] = ua
+			cache.cacheLastUpdated = currentTime
+			return ua, true
+		}
+	}
 }

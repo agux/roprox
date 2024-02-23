@@ -1,7 +1,9 @@
 package network
 
 import (
+	"crypto/tls"
 	"fmt"
+	"io"
 	"math/rand"
 	"net"
 	"net/http"
@@ -10,7 +12,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/PuerkitoBio/goquery"
 	"github.com/agux/roprox/internal/conf"
 	"github.com/agux/roprox/internal/data"
 	"github.com/agux/roprox/internal/types"
@@ -29,7 +30,7 @@ func DomainOf(url string) (domain string) {
 }
 
 // ValidateProxy checks the status of remote listening port, and further checks if it's a valid proxy server
-func ValidateProxy(stype, host, port, link, targetID string, probeTimeout int) bool {
+func ValidateProxy(stype, host, port, link, keyword string, probeTimeout int) bool {
 	timeout := time.Second * time.Duration(probeTimeout)
 	addr := net.JoinHostPort(host, port)
 	conn, err := net.DialTimeout("tcp", addr, timeout)
@@ -55,7 +56,10 @@ func ValidateProxy(stype, host, port, link, targetID string, probeTimeout int) b
 			log.Warnln(addr, " failed, ", err)
 			return false
 		}
-		httpTransport := &http.Transport{Dial: dialer.Dial}
+		httpTransport := &http.Transport{
+			Dial:            dialer.Dial,
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		}
 		client = &http.Client{Timeout: timeout, Transport: httpTransport}
 	} else if strings.EqualFold("http", stype) {
 		addr = fmt.Sprintf("%s://%s:%s", stype, host, port)
@@ -65,8 +69,11 @@ func ValidateProxy(stype, host, port, link, targetID string, probeTimeout int) b
 			return false
 		}
 		client = &http.Client{
-			Timeout:   timeout,
-			Transport: &http.Transport{Proxy: http.ProxyURL(proxyURL)}}
+			Timeout: timeout,
+			Transport: &http.Transport{
+				Proxy:           http.ProxyURL(proxyURL),
+				TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+			}}
 	} else {
 		log.Warn("proxy protocol checking not supported", stype)
 	}
@@ -98,16 +105,20 @@ func ValidateProxy(stype, host, port, link, targetID string, probeTimeout int) b
 	}
 	defer res.Body.Close()
 
-	doc, e := goquery.NewDocumentFromReader(res.Body)
-	if e != nil {
-		log.Tracef("%s failed to read validation site's response body: %+v", addr, e)
+	// read all data from res.Body and convert to string
+	bodyBytes, err := io.ReadAll(res.Body)
+	if err != nil {
+		log.Tracef("%s failed to read validation site's response body: %+v", addr, err)
 		return false
 	}
-	size := doc.Find(targetID).Size()
-	if size > 0 {
+	bodyString := string(bodyBytes)
+
+	// if bodyString contains keyword, the validation is deemed successful. otherwise it's failure and return false.
+	if strings.Contains(bodyString, keyword) {
 		log.Tracef("%s success", addr)
 		return true
 	}
+
 	log.Tracef("%s failed to identify target on validation site", addr)
 	return false
 }

@@ -1,27 +1,28 @@
 package network
 
 import (
+	"time"
+
 	"github.com/agux/roprox/internal/data"
 	"github.com/agux/roprox/internal/types"
 )
 
 // UpdateProxyScore for the specified proxy.
 func UpdateProxyScore(p *types.ProxyServer, success bool) {
-	if p == nil {
+	if p == nil || p.ID <= 0 {
 		return
 	}
 	var e error
 	if success {
 		e = data.GormDB.Exec(`
-			update proxy_servers set suc = suc + 1, score = suc/(suc+fail)*100
-				where host = ? and port = ?
-			`,
-			p.Host, p.Port).Error
+			update proxy_servers set suc = suc + 1, score = (suc+1)/(suc+1+fail)*100, updated_at = ?
+				where id = ?
+			`, p.ID, time.Now()).Error
 	} else {
 		e = data.GormDB.Exec(`
-			update proxy_servers set fail = fail + 1, score = suc/(suc+fail)*100
-				where host = ? and port = ?
-			`, p.Host, p.Port).Error
+			update proxy_servers set fail = fail + 1, score = suc/(suc+fail+1)*100, updated_at = ?
+				where id = ?
+			`, p.ID, time.Now()).Error
 	}
 	if e != nil {
 		log.Errorf("failed to increase scoring counter for proxy %+v", p)

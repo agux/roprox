@@ -16,15 +16,6 @@ func Test_Check(t *testing.T) {
 	Check(&sync.WaitGroup{})
 }
 
-func Test_ProbeGlobal(t *testing.T) {
-	ch := make(chan *types.ProxyServer, 16)
-	var wg sync.WaitGroup
-	wg.Add(1)
-	ch <- types.NewProxyServer("Vultr", "127.0.0.1", "1087", "socks5", "")
-	probeGlobal(ch)
-	wg.Wait()
-}
-
 func Test_ProbeLocal(t *testing.T) {
 	ch := make(chan *types.ProxyServer, 16)
 	var wg sync.WaitGroup

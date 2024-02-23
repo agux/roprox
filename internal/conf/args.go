@@ -16,22 +16,8 @@ var vp *viper.Viper
 
 // Arguments arguments struct type
 type Arguments struct {
-	LogLevel               string  `mapstructure:"log_level"`
-	ScannerPoolSize        int     `mapstructure:"scanner_pool_size"`
-	ScannerMaxRetry        int     `mapstructure:"scanner_max_retry"`
-	LocalProbeSize         int     `mapstructure:"local_probe_size"`
-	LocalProbeInterval     int     `mapstructure:"local_probe_interval"`
-	LocalProbeTimeout      int     `mapstructure:"local_probe_timeout"`
-	LocalProbeRetry        int     `mapstructure:"local_probe_retry"`
-	GlobalProbeSize        int     `mapstructure:"global_probe_size"`
-	GlobalProbeInterval    int     `mapstructure:"global_probe_interval"`
-	GlobalProbeTimeout     int     `mapstructure:"global_probe_timeout"`
-	GlobalProbeRetry       int     `mapstructure:"global_probe_retry"`
-	EvictionTimeout        int     `mapstructure:"eviction_timeout"`
-	EvictionInterval       int     `mapstructure:"eviction_interval"`
-	EvictionScoreThreshold float32 `mapstructure:"eviction_score_threshold"`
-
 	Logging struct {
+		LogLevel    string `mapstructure:"log_level"`
 		LogFilePath string `mapstructure:"log_file_path"`
 	}
 
@@ -44,11 +30,31 @@ type Arguments struct {
 		RotateProxyGlobalScoreThreshold float64 `mapstructure:"rotate_proxy_global_score_threshold"`
 	}
 
+	Probe struct {
+		Size          int    `mapstructure:"size"`
+		Interval      int    `mapstructure:"interval"`
+		Timeout       int    `mapstructure:"timeout"`
+		CheckUrl      string `mapstructure:"check_url"`
+		CheckKeyword  string `mapstructure:"check_keyword"`
+		FailThreshold int    `mapstructure:"fail_threshold"`
+	}
+
+	Scanner struct {
+		PoolSize int `mapstructure:"pool_size"`
+		MaxRetry int `mapstructure:"max_retry"`
+	}
+
 	Proxy struct {
-		Port               int    `mapstructure:"port"`
-		BindUserAgent      bool   `mapstructure:"bind_user_agent"`
-		MemCacheLifespan   int    `mapstructure:"mem_cache_lifespan"`
-		SSLCertificatePath string `mapstructure:"ssl_certificate_folder"`
+		Port                   int     `mapstructure:"port"`
+		BindUserAgent          bool    `mapstructure:"bind_user_agent"`
+		MemCacheLifespan       int     `mapstructure:"mem_cache_lifespan"`
+		FallbackMasterProxy    bool    `mapstructure:"fallback_master_proxy"`
+		SSLCertificatePath     string  `mapstructure:"ssl_certificate_folder"`
+		BackendProxyTimeout    int     `mapstructure:"backend_proxy_timeout"`
+		MaxRetryDuration       int     `mapstructure:"max_retry_duration"`
+		EvictionTimeout        int     `mapstructure:"eviction_timeout"`
+		EvictionInterval       int     `mapstructure:"eviction_interval"`
+		EvictionScoreThreshold float32 `mapstructure:"eviction_score_threshold"`
 	}
 
 	WebDriver struct {
@@ -95,6 +101,7 @@ func init() {
 	vp = viper.New()
 	setDefaults()
 	vp.SetConfigName("roprox") // name of config file (without extension)
+	vp.SetConfigType("toml")
 	gopath := os.Getenv("GOPATH")
 	if gopath == "" {
 		gopath = build.Default.GOPATH
