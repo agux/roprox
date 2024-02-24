@@ -1,5 +1,5 @@
 .vscode/*
 .history/*
 roprox.log
-roprox
+/roprox
 .DS_Store
