@@ -9,8 +9,6 @@ import (
 	"math/rand"
 	"net"
 	"net/http"
-	"net/url"
-	"strings"
 	"sync"
 	"time"
 
@@ -20,8 +18,9 @@ import (
 	"github.com/agux/roprox/internal/network"
 	"github.com/agux/roprox/internal/types"
 	"github.com/agux/roprox/internal/ua"
+	"github.com/agux/roprox/internal/util"
 	"github.com/avast/retry-go"
-	"golang.org/x/net/proxy"
+	"github.com/pkg/errors"
 )
 
 var log = logging.Logger
@@ -167,33 +166,7 @@ func handleClient(client net.Conn) {
 	}
 }
 
-func handleHttpRequest(cw *ConnResponseWriter, req *http.Request, ps *types.ProxyServer) error {
-	var transport http.RoundTripper
-
-	if strings.HasPrefix(ps.Type, "http") {
-		proxyURL, err := url.Parse(ps.UrlString())
-		if err != nil {
-			emsg := fmt.Sprintf("Error parsing proxy URL: %s, %+v", ps.UrlString(), err)
-			log.Error(emsg)
-			return err
-		}
-		transport = &http.Transport{
-			Proxy: http.ProxyURL(proxyURL),
-		}
-	} else {
-		dialer, err := proxy.SOCKS5("tcp", fmt.Sprintf("%s:%s", ps.Host, ps.Port), nil, proxy.Direct)
-		if err != nil {
-			emsg := fmt.Sprintf("Error creating SOCKS5 dialer: %+v", err)
-			log.Error(emsg)
-			return err
-		}
-		transport = &http.Transport{
-			Dial: dialer.Dial,
-		}
-	}
-
-	transport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
-
+func handleHttpRequest(cw *ConnResponseWriter, req *http.Request, ps *types.ProxyServer) (e error) {
 	if req.URL.Scheme == "" {
 		req.URL.Scheme = "https"
 	}
@@ -202,29 +175,35 @@ func handleHttpRequest(cw *ConnResponseWriter, req *http.Request, ps *types.Prox
 	req.URL.Host = req.Host
 
 	userAgent := conf.Args.Network.DefaultUserAgent
-	if uaVal, found := ua.GetUserAgent(ps.UrlString()); found {
-		userAgent = uaVal
+	if uaVal, e := ua.GetUserAgent(ps.UrlString()); e != nil {
+		log.Warnf("failed to get random user-agent: %+v\nfallback to default User-Agent: %s", e, userAgent)
 	} else {
-		log.Warnf("fallback to default User-Agent: %s", userAgent)
+		userAgent = uaVal
 	}
 	req.Header.Set("User-Agent", userAgent)
 
+	var transport *http.Transport
+	if transport, e = network.GetTransport(ps, true); e != nil {
+		return
+	}
 	targetClient := &http.Client{
 		Timeout:   time.Duration(conf.Args.Proxy.BackendProxyTimeout) * time.Second,
 		Transport: transport,
 	}
+
+	log.Tracef("relaying HTTP request via proxy [%s]:\n%+v", ps.UrlString(), req)
 	response, err := targetClient.Do(req)
 	if err != nil {
-		emsg := fmt.Sprintf("failed to relay request to proxy [%s]: %+v", ps.UrlString(), err)
-		log.Error(emsg)
-		return err
+		e = errors.Wrapf(err, "failed to relay request to proxy [%s]", ps.UrlString())
+		log.Warn(e)
+		return
 	}
 	defer response.Body.Close()
 
 	body, err := io.ReadAll(response.Body)
 	if err != nil {
-		emsg := fmt.Sprintf("Error reading response body from proxy [%s]: %+v", ps.UrlString(), err)
-		log.Error(emsg)
+		e = errors.Wrapf(err, "Error reading response body from proxy [%s]", ps.UrlString())
+		log.Warn(e)
 		return err
 	}
 
@@ -293,28 +272,5 @@ func selectProxy() *types.ProxyServer {
 	}
 
 	log.Warnf("no qualified proxy at the moment. falling back to master proxy: %s", conf.Args.Network.MasterProxyAddr)
-
-	// construct a new *types.ProxyServer instance from the `conf.Args.Network.MasterProxyAddr` string.
-	// sample: `http://127.0.0.1:1087`, `socks5://127.0.0.1:1080`
-	// parse the string and assign to corresponding ProxyServer struct attributes as follows:
-	// {Host: "127.0.0.1", Port: "1087", Type: "http"}
-	// {Host: "127.0.0.1", Port: "1080", Type: "socks5"}
-	masterProxy = &types.ProxyServer{ID: 0, Source: "config"}
-	u, err := url.Parse(conf.Args.Network.MasterProxyAddr)
-	if err != nil {
-		log.Errorf("Error parsing master proxy address: %v\n", err)
-		return nil
-	}
-	masterProxy.Host = u.Hostname()
-	masterProxy.Port = u.Port()
-	switch u.Scheme {
-	case "http", "https":
-		masterProxy.Type = u.Scheme
-	case "socks5":
-		masterProxy.Type = "socks5"
-	default:
-		log.Errorf("Unsupported proxy scheme: %s\n", u.Scheme)
-		return nil
-	}
-	return masterProxy
+	return util.GetMasterProxy()
 }

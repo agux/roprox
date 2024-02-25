@@ -220,7 +220,7 @@ func allocatorOptions(fspec types.FetcherSpec) (o []chromedp.ExecAllocatorOption
 	df := fspec.(types.DynamicHTMLFetcher)
 	switch proxyMode {
 	case types.MasterProxy:
-		p := fmt.Sprintf("socks5://%s", conf.Args.Network.MasterProxyAddr)
+		p := conf.Args.Network.MasterProxyAddr
 		log.Debugf("using proxy: %s", p)
 		o = append(o, chromedp.ProxyServer(p))
 	case types.RotateProxy:
@@ -231,15 +231,6 @@ func allocatorOptions(fspec types.FetcherSpec) (o []chromedp.ExecAllocatorOption
 		}
 		p := fmt.Sprintf("%s://%s:%s", rpx.Type, rpx.Host, rpx.Port)
 		log.Debugf("using proxy: %s", p)
-		o = append(o, chromedp.ProxyServer(p))
-	case types.RotateGlobalProxy:
-		var e error
-		if rpx, e = network.PickGlobalProxy(); e != nil {
-			log.Fatalf("%s unable to pick global rotate proxy: %+v", fspec.UID(), e)
-			return
-		}
-		p := fmt.Sprintf("%s://%s:%s", rpx.Type, rpx.Host, rpx.Port)
-		log.Debugf("using global proxy: %s", p)
 		o = append(o, chromedp.ProxyServer(p))
 	}
 	if types.Direct != proxyMode {
@@ -270,12 +261,7 @@ func allocatorOptions(fspec types.FetcherSpec) (o []chromedp.ExecAllocatorOption
 
 func updateProxyScore(fspec t.FetcherSpec, rpx *t.ProxyServer, suc bool) {
 	if rpx != nil {
-		switch fspec.ProxyMode() {
-		case t.RotateGlobalProxy:
-			network.UpdateProxyScoreGlobal(rpx, false)
-		case t.RotateProxy:
-			network.UpdateProxyScore(rpx, false)
-		}
+		network.UpdateProxyScore(rpx, false)
 	}
 }
 

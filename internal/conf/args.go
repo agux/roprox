@@ -31,12 +31,10 @@ type Arguments struct {
 	}
 
 	Probe struct {
-		Size          int    `mapstructure:"size"`
-		Interval      int    `mapstructure:"interval"`
-		Timeout       int    `mapstructure:"timeout"`
-		CheckUrl      string `mapstructure:"check_url"`
-		CheckKeyword  string `mapstructure:"check_keyword"`
-		FailThreshold int    `mapstructure:"fail_threshold"`
+		Size          int `mapstructure:"size"`
+		Interval      int `mapstructure:"interval"`
+		Timeout       int `mapstructure:"timeout"`
+		FailThreshold int `mapstructure:"fail_threshold"`
 	}
 
 	Scanner struct {

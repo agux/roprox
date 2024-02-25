@@ -21,7 +21,7 @@ func Test_ProbeLocal(t *testing.T) {
 	var wg sync.WaitGroup
 	wg.Add(1)
 	ch <- types.NewProxyServer("GatherProxy", "47.94.220.11", "3128", "http", "")
-	probeLocal(ch)
+	probe(ch)
 	wg.Wait()
 }
 

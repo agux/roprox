@@ -74,7 +74,7 @@ func PickUserAgent() (ua string, e error) {
 	return agentPool[rand.Intn(len(agentPool))], nil
 }
 
-func GetUserAgent(proxyURL string) (string, bool) {
+func GetUserAgent(proxyURL string) (string, error) {
 	return uaCache.GetUserAgent(proxyURL)
 }
 
@@ -104,24 +104,24 @@ func (cache *userAgentCache) downgradeAndUnlock() {
 	cache.upgMtx.Unlock() // Release the upgradeMutex to allow other upgrades.
 }
 
-func (cache *userAgentCache) GetUserAgent(proxyURL string) (string, bool) {
+func (cache *userAgentCache) GetUserAgent(proxyURL string) (string, error) {
 	cache.r_lock()
 	if cache.userAgentBinding == nil {
 		cache.userAgentBinding = make(map[string]string)
 	}
 	if value, ok := cache.userAgentBinding[proxyURL]; ok {
 		cache.r_unlock()
-		return value, true
+		return value, nil
 	} else {
 		cache.upgradeToWriteLock()
 		defer cache.downgradeAndUnlock()
 		currentTime := time.Now().Unix()
 		if ua, e := PickUserAgent(); e != nil {
-			return "", false
+			return "", e
 		} else {
 			cache.userAgentBinding[proxyURL] = ua
 			cache.cacheLastUpdated = currentTime
-			return ua, true
+			return ua, nil
 		}
 	}
 }

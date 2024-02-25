@@ -19,10 +19,9 @@ type ContentType string
 type ProxyMode string
 
 const (
-	MasterProxy       ProxyMode = "master"
-	RotateProxy       ProxyMode = "rotate"
-	RotateGlobalProxy ProxyMode = "rotate_global"
-	Direct            ProxyMode = "direct"
+	MasterProxy ProxyMode = "master"
+	RotateProxy ProxyMode = "rotate"
+	Direct      ProxyMode = "direct"
 )
 
 const (

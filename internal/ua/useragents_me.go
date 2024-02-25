@@ -37,8 +37,8 @@ func (uam userAgentsMe) outdated(agents []*types.UserAgent) (outdated bool, e er
 	if e != nil {
 		return
 	}
-	if time.Since(latest).Hours() >=
-		float64(time.Duration(conf.Args.DataSource.UserAgentLifespan*24)*time.Hour) {
+	if time.Since(latest) >=
+		time.Duration(conf.Args.DataSource.UserAgentLifespan*24)*time.Hour {
 		outdated = true
 	}
 	return
