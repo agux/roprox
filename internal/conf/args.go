@@ -31,18 +31,23 @@ type Arguments struct {
 	}
 
 	Probe struct {
-		Size          int `mapstructure:"size"`
-		Interval      int `mapstructure:"interval"`
-		Timeout       int `mapstructure:"timeout"`
-		FailThreshold int `mapstructure:"fail_threshold"`
+		Enabled       bool `mapstructure:"enabled"`
+		Size          int  `mapstructure:"size"`
+		Interval      int  `mapstructure:"interval"`
+		Timeout       int  `mapstructure:"timeout"`
+		FailThreshold int  `mapstructure:"fail_threshold"`
 	}
 
 	Scanner struct {
-		PoolSize int `mapstructure:"pool_size"`
-		MaxRetry int `mapstructure:"max_retry"`
+		Enabled  bool `mapstructure:"enabled"`
+		PoolSize int  `mapstructure:"pool_size"`
+		MaxRetry int  `mapstructure:"max_retry"`
 	}
 
 	Proxy struct {
+		Enabled                bool    `mapstructure:"enabled"`
+		EnableInspection       bool    `mapstructure:"enable_inspection"`
+		BypassTraffic          bool    `mapstructure:"bypass_traffic"`
 		Port                   int     `mapstructure:"port"`
 		BindUserAgent          bool    `mapstructure:"bind_user_agent"`
 		MemCacheLifespan       int     `mapstructure:"mem_cache_lifespan"`

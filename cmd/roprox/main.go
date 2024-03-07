@@ -25,14 +25,24 @@ func main() {
 	}()
 
 	log.Infof("config file used: %s", conf.ConfigFileUsed())
-	log.Infof("roprox starting on port %d", conf.Args.Proxy.Port)
 
 	var wg sync.WaitGroup
 
-	wg.Add(3)
-	go scanner.Scan(&wg)
-	go proxy.Serve(&wg)
-	go checker.Check(&wg)
+	if conf.Args.Scanner.Enabled {
+		log.Infof("starting scanner")
+		wg.Add(1)
+		go scanner.Scan(&wg)
+	}
+	if conf.Args.Proxy.Enabled {
+		log.Infof("starting proxy on port %d", conf.Args.Proxy.Port)
+		wg.Add(1)
+		go proxy.Serve(&wg)
+	}
+	if conf.Args.Probe.Enabled {
+		log.Infof("starting probe")
+		wg.Add(1)
+		go checker.Check(&wg)
+	}
 
 	wg.Wait()
 }

@@ -161,3 +161,23 @@ func (ua *UserAgent) String() string {
 	}
 	return fmt.Sprintf("%v", string(j))
 }
+
+type NetworkTraffic struct {
+	ID                    uint      `gorm:"primaryKey;autoIncrement"`
+	Timestamp             time.Time `gorm:"not null"`
+	SourceIP              string    `gorm:"not null"`
+	DestinationIP         string    `gorm:"not null"`
+	SourcePort            int       `gorm:"size:16"`
+	DestinationPort       int       `gorm:"size:16"`
+	Protocol              string    `gorm:"size:10"`
+	Method                string    `gorm:"size:10"`
+	URL                   string    `gorm:"not null"`
+	RequestHeaders        string    `gorm:"type:text"`
+	RequestBody           []byte    `gorm:"type:blob"`
+	ResponseHeaders       string    `gorm:"type:text"`
+	ResponseBody          []byte    `gorm:"type:blob"`
+	StatusCode            uint      `gorm:"size:16"`
+	ResponseContentLength uint      `gorm:"size:32"`
+	MIMEType              string    `gorm:"size:50"`
+	gorm.Model
+}

@@ -77,7 +77,11 @@ func initSQLite() {
 		log.Panicln("gorm.Open() failed", err)
 	}
 
-	if err = GormDB.AutoMigrate(&types.ProxyServer{}, &types.UserAgent{}); err != nil {
+	if err = GormDB.AutoMigrate(
+		&types.ProxyServer{},
+		&types.UserAgent{},
+		&types.NetworkTraffic{},
+	); err != nil {
 		log.Panicln("GORM auto migrate failure", err)
 	}
 

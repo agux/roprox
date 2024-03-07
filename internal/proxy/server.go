@@ -2,6 +2,7 @@ package proxy
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"crypto/tls"
 	"fmt"
@@ -9,11 +10,14 @@ import (
 	"math/rand"
 	"net"
 	"net/http"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/agux/roprox/internal/cert"
 	"github.com/agux/roprox/internal/conf"
+	"github.com/agux/roprox/internal/data"
 	"github.com/agux/roprox/internal/logging"
 	"github.com/agux/roprox/internal/network"
 	"github.com/agux/roprox/internal/types"
@@ -140,6 +144,7 @@ func handleClient(client net.Conn) {
 			emsg := fmt.Sprintf("Error intercepting request: %+v", err)
 			log.Error(emsg)
 			http.Error(cw, emsg, http.StatusBadRequest)
+			return
 		}
 
 		// swap the connection with intercepted connection
@@ -147,7 +152,10 @@ func handleClient(client net.Conn) {
 	}
 
 	op := func() (e error) {
-		ps := selectProxy()
+		var ps *types.ProxyServer
+		if !conf.Args.Proxy.BypassTraffic {
+			ps = selectProxy()
+		}
 		e = handleHttpRequest(cw, request, ps)
 		network.UpdateProxyScore(ps, e == nil)
 		return
@@ -167,34 +175,50 @@ func handleClient(client net.Conn) {
 }
 
 func handleHttpRequest(cw *ConnResponseWriter, req *http.Request, ps *types.ProxyServer) (e error) {
-	if req.URL.Scheme == "" {
+	if req.URL != nil && req.URL.Scheme == "" {
 		req.URL.Scheme = "https"
 	}
 
-	req.RequestURI = "" // Request.RequestURI can't be set in client requests
 	req.URL.Host = req.Host
+	req.RequestURI = "" // Request.RequestURI can't be set in client requests
 
-	userAgent := conf.Args.Network.DefaultUserAgent
-	if uaVal, e := ua.GetUserAgent(ps.UrlString()); e != nil {
-		log.Warnf("failed to get random user-agent: %+v\nfallback to default User-Agent: %s", e, userAgent)
-	} else {
-		userAgent = uaVal
+	if ps != nil {
+		userAgent := conf.Args.Network.DefaultUserAgent
+		if uaVal, e := ua.GetUserAgent(ps.UrlString()); e != nil {
+			log.Warnf("failed to get random user-agent: %+v\nfallback to default User-Agent: %s", e, userAgent)
+		} else {
+			userAgent = uaVal
+		}
+		req.Header.Set("User-Agent", userAgent)
 	}
-	req.Header.Set("User-Agent", userAgent)
 
-	var transport *http.Transport
-	if transport, e = network.GetTransport(ps, true); e != nil {
-		return
-	}
 	targetClient := &http.Client{
-		Timeout:   time.Duration(conf.Args.Proxy.BackendProxyTimeout) * time.Second,
-		Transport: transport,
+		Timeout: time.Duration(conf.Args.Proxy.BackendProxyTimeout) * time.Second,
 	}
 
-	log.Tracef("relaying HTTP request via proxy [%s]:\n%+v", ps.UrlString(), req)
+	if ps != nil {
+		var transport *http.Transport
+		if transport, e = network.GetTransport(ps, true); e != nil {
+			return
+		}
+		log.Tracef("relaying HTTP request via proxy [%s]:\n%+v", ps.UrlString(), req)
+		targetClient.Transport = transport
+	}
+
+	var reqBodyCopy []byte
+	if req.Body != nil && conf.Args.Proxy.EnableInspection {
+		reqBodyCopy, _ = io.ReadAll(req.Body)
+		// After reading the body, it needs to be replaced for the client.Do call
+		req.Body = io.NopCloser(bytes.NewBuffer(reqBodyCopy))
+	}
+
 	response, err := targetClient.Do(req)
 	if err != nil {
-		e = errors.Wrapf(err, "failed to relay request to proxy [%s]", ps.UrlString())
+		if ps != nil {
+			e = errors.Wrapf(err, "failed to relay request to proxy [%s]", ps.UrlString())
+		} else {
+			e = errors.Wrap(err, "failed to relay request (bypass proxy)")
+		}
 		log.Warn(e)
 		return
 	}
@@ -202,7 +226,11 @@ func handleHttpRequest(cw *ConnResponseWriter, req *http.Request, ps *types.Prox
 
 	body, err := io.ReadAll(response.Body)
 	if err != nil {
-		e = errors.Wrapf(err, "Error reading response body from proxy [%s]", ps.UrlString())
+		if ps != nil {
+			e = errors.Wrapf(err, "Error reading response body from proxy [%s]", ps.UrlString())
+		} else {
+			e = errors.Wrap(err, "Error reading response body (bypass proxy)")
+		}
 		log.Warn(e)
 		return err
 	}
@@ -214,6 +242,12 @@ func handleHttpRequest(cw *ConnResponseWriter, req *http.Request, ps *types.Prox
 	}
 	cw.WriteHeader(response.StatusCode)
 	cw.Write(body)
+
+	if conf.Args.Proxy.EnableInspection {
+		if err := SaveNetworkTraffic(req, reqBodyCopy, response, body); err != nil {
+			log.Warn("failed to save traffic inspection to database: ", err)
+		}
+	}
 
 	return nil
 }
@@ -273,4 +307,62 @@ func selectProxy() *types.ProxyServer {
 
 	log.Warnf("no qualified proxy at the moment. falling back to master proxy: %s", conf.Args.Network.MasterProxyAddr)
 	return util.GetMasterProxy()
+}
+
+// PrettyPrintHeaders formats http.Header into a human-readable string.
+func PrettyPrintHeaders(headers http.Header) string {
+	var sb strings.Builder
+	for name, values := range headers {
+		for _, value := range values {
+			sb.WriteString(name)
+			sb.WriteString(": ")
+			sb.WriteString(value)
+			sb.WriteString("\n")
+		}
+	}
+	return sb.String()
+}
+
+// SaveNetworkTraffic takes an http.Request, its body, http.Response, and response body,
+// maps them to the NetworkTraffic model, and saves it to the database.
+func SaveNetworkTraffic(req *http.Request, reqBody []byte, res *http.Response, resBody []byte) (e error) {
+	var sourcePort, destinationPort int
+	if _, sourcePortStr, e := net.SplitHostPort(req.RemoteAddr); e != nil {
+		log.Warnf("failed to parse RemoteAddr: %s", req.RemoteAddr)
+		sourcePort = 0
+	} else if sourcePort, e = strconv.Atoi(sourcePortStr); e != nil {
+		log.Warnf("failed to parse source port: %s", sourcePortStr)
+		return e
+	}
+	if _, destPortStr, e := net.SplitHostPort(req.Host); e != nil {
+		log.Warnf("failed to parse Host: %s", req.Host)
+		destinationPort = 0
+	} else if destinationPort, e = strconv.Atoi(destPortStr); e != nil {
+		log.Warnf("failed to parse destination port: %s", destPortStr)
+		return e
+	}
+	networkTraffic := &types.NetworkTraffic{
+		Timestamp:             time.Now(),
+		SourceIP:              req.RemoteAddr,
+		DestinationIP:         req.Host, // This is the host:port
+		SourcePort:            sourcePort,
+		DestinationPort:       destinationPort,
+		Protocol:              req.Proto,
+		Method:                req.Method,
+		URL:                   req.URL.String(),
+		RequestHeaders:        PrettyPrintHeaders(req.Header),
+		RequestBody:           reqBody,
+		ResponseHeaders:       PrettyPrintHeaders(res.Header),
+		ResponseBody:          resBody,
+		StatusCode:            uint(res.StatusCode),
+		ResponseContentLength: uint(len(resBody)),
+		MIMEType:              res.Header.Get("Content-Type"),
+	}
+
+	// Save the record to the database
+	result := data.GormDB.CreateInBatches(&networkTraffic, 8)
+	if result.Error != nil {
+		return result.Error
+	}
+	return nil
 }
