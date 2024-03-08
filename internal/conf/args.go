@@ -53,6 +53,7 @@ type Arguments struct {
 		MemCacheLifespan       int     `mapstructure:"mem_cache_lifespan"`
 		FallbackMasterProxy    bool    `mapstructure:"fallback_master_proxy"`
 		SSLCertificatePath     string  `mapstructure:"ssl_certificate_folder"`
+		SSLCertificateRoot     string  `mapstructure:"ssl_certificate_root"`
 		BackendProxyTimeout    int     `mapstructure:"backend_proxy_timeout"`
 		MaxRetryDuration       int     `mapstructure:"max_retry_duration"`
 		EvictionTimeout        int     `mapstructure:"eviction_timeout"`

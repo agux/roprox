@@ -207,6 +207,7 @@ func GetTransport(ps *types.ProxyServer, insecureSkipVerify bool) (transport *ht
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: insecureSkipVerify},
 	}
 	if ps == nil {
+		transport.Proxy = nil
 		return
 	}
 	if strings.HasPrefix(ps.Type, "http") {

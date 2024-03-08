@@ -103,12 +103,15 @@ func Serve(wg *sync.WaitGroup) {
 	}
 	defer listener.Close()
 
-	log.Info("roprox started successfully.")
-
-	num := len(proxyCache.GetData())
-	if num <= 0 {
-		log.Info("currently there's no qualified proxy in the backend. " +
-			"Please wait while the scanner is crawling for public proxy resources.")
+	if conf.Args.Proxy.BypassTraffic {
+		log.Info("roprox started successfully in bypass mode.")
+	} else {
+		log.Info("roprox started successfully.")
+		num := len(proxyCache.GetData())
+		if num <= 0 {
+			log.Info("currently there's no qualified proxy in the backend. " +
+				"Please wait while the scanner is crawling for public proxy resources.")
+		}
 	}
 
 	for {
@@ -179,8 +182,9 @@ func handleHttpRequest(cw *ConnResponseWriter, req *http.Request, ps *types.Prox
 		req.URL.Scheme = "https"
 	}
 
+	// Request.RequestURI can't be set in client requests
+	req.RequestURI = ""
 	req.URL.Host = req.Host
-	req.RequestURI = "" // Request.RequestURI can't be set in client requests
 
 	if ps != nil {
 		userAgent := conf.Args.Network.DefaultUserAgent
@@ -196,14 +200,14 @@ func handleHttpRequest(cw *ConnResponseWriter, req *http.Request, ps *types.Prox
 		Timeout: time.Duration(conf.Args.Proxy.BackendProxyTimeout) * time.Second,
 	}
 
-	if ps != nil {
-		var transport *http.Transport
-		if transport, e = network.GetTransport(ps, true); e != nil {
-			return
-		}
-		log.Tracef("relaying HTTP request via proxy [%s]:\n%+v", ps.UrlString(), req)
-		targetClient.Transport = transport
+	var transport *http.Transport
+	if transport, e = network.GetTransport(ps, true); e != nil {
+		return
 	}
+	if ps != nil {
+		log.Tracef("relaying HTTP request via proxy [%s]:\n%+v", ps.UrlString(), req)
+	}
+	targetClient.Transport = transport
 
 	var reqBodyCopy []byte
 	if req.Body != nil && conf.Args.Proxy.EnableInspection {
@@ -275,11 +279,36 @@ func intercept(req *http.Request, client net.Conn) (newReq *http.Request, newCon
 		return
 	}
 
-	// Hijack the connection to perform a TLS handshake.
+	// Hijack the connection and try to perform a TLS handshake.
 	newConn = tls.Server(client, tlsConfig)
 	if e = newConn.Handshake(); e != nil {
-		log.Errorf("TLS handshake error: %v\n", e)
+		defer newConn.Close()
+		log.Warnf("TLS handshake error: %v\n", e)
 		return
+		// handleTlsHandshakeError(newConn)
+		// if the handshake fails, the client-server could be using custom protocols based off TLS.
+		// try to parse the request as raw data (bytes or strings), with timeout constraint because
+		// the client could be onholding and not sending any data, waiting for server to send message first.
+		// ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		// defer cancel()
+
+		// select {
+		// case <-ctx.Done():
+		// 	log.Warn("Client did not send data within the timeout period.")
+		// 	e = ctx.Err()
+		// 	return
+		// default:
+		// 	// Proceed with reading the data as raw if there's any
+		// 	r := bufio.NewReader(newConn)
+		// 	for {
+		// 		msg, err := r.ReadString('\n')
+		// 		if err != nil {
+		// 			log.Errorf("failed to read custom string: %s", err)
+		// 			return
+		// 		}
+		// 		log.Infof("Received: %s", msg)
+		// 	}
+		// }
 	}
 
 	// read request from tlsConn

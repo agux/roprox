@@ -52,6 +52,12 @@ func (cache *proxyServerCache) GetData() []types.ProxyServer {
 func init() {
 	certStore = make(map[string]tls.Certificate)
 
+	if !conf.Args.Proxy.BypassTraffic {
+		refreshProxyCache()
+	}
+}
+
+func refreshProxyCache() {
 	proxyCache = &proxyServerCache{}
 	if e := proxyCache.RefreshData(data.GormDB); e != nil {
 		log.Fatal("failed to load proxy from database", e)
