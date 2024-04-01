@@ -141,17 +141,70 @@ func handleClient(client net.Conn) {
 	}
 
 	var e error
+	// var tlsClient *tls.Conn
 	// If method is CONNECT, we're dealing with HTTPS. This part is not retryable
 	if request.Method == http.MethodConnect {
-		if request, client, e = intercept(request, client); e != nil {
-			emsg := fmt.Sprintf("Error intercepting request: %+v", err)
+		if request, _, e = intercept(cw, request, client); e != nil {
+			emsg := fmt.Sprintf("Error intercepting request: %+v", e)
 			log.Error(emsg)
-			http.Error(cw, emsg, http.StatusBadRequest)
+			http.Error(cw, "", http.StatusBadRequest)
 			return
-		}
+			// if the error (e) denotes TLS handshake error (such as `first record does not look like a TLS handshake`),
+			// we need to extract the raw request data ([]byte or string) from e and handle custom protocol.
+			// Handle custom protocol based on the error type and raw request data
+			// This is a simplified example. Implement according to your protocol specifications.
+			// switch rhe := e.(type) {
+			// case tls.RecordHeaderError:
+			// 	// in this case, we need to try reading raw request content as bytes from the connection underlying the RecordHeaderError
+			// 	// Attempt to read raw request content from the connection
+			// 	var rawRequest []byte
+			// 	rawRequest, e = readFromConnection(tlsClient, 5) // 5 seconds timeout for simplicity
+			// 	if e != nil {
+			// 		log.Errorf("Failed to read raw request from connection: %v\n", e)
+			// 	}
+			// 	// concatenate rhe.RecordHeader and rawRequest
+			// 	rawRequest = append(rhe.RecordHeader[:], rawRequest...)
 
-		// swap the connection with intercepted connection
-		cw.conn = client
+			// 	// Handle the raw request based on your custom protocol
+			// 	// This is a placeholder for custom protocol handling logic
+			// 	// You might want to inspect rawRequest bytes to determine how to proceed
+			// 	log.Infof("Received raw request: %s\n", string(rawRequest))
+
+			// 	//forward / write the rawRequest to request.Host and read its response as bytes with timeout
+			// 	var destConn net.Conn
+			// 	destConn, e = net.DialTimeout("tcp", request.Host, 5*time.Second)
+			// 	if e != nil {
+			// 		log.Error(e.Error(), http.StatusServiceUnavailable)
+			// 		return
+			// 	}
+			// 	defer destConn.Close()
+			// 	destConn.Write(rawRequest)
+
+			// 	// Set a timeout for reading the response
+			// 	if err := destConn.SetReadDeadline(time.Now().Add(5 * time.Second)); err != nil {
+			// 		log.Errorf("Failed to set read deadline: %v\n", err)
+			// 		return
+			// 	}
+
+			// 	// Read the response from the destination server
+			// 	var responseBuffer bytes.Buffer
+			// 	if _, err := io.Copy(&responseBuffer, destConn); err != nil {
+			// 		log.Errorf("Failed to read response from destination: %v\n", err)
+			// 		return
+			// 	}
+
+			// 	log.Infof("Raw response as bytes: %v\n", responseBuffer.Bytes())
+			// 	log.Infof("Raw response as string: %s\n", responseBuffer.String())
+
+			// 	// Write the response back to the client
+			// 	if _, err := cw.Write(responseBuffer.Bytes()); err != nil {
+			// 		log.Errorf("Failed to write response to client: %v\n", err)
+			// 	}
+
+			// default:
+			// 	log.Errorf("Unhandled error type: %T\n", e)
+			// }
+		}
 	}
 
 	op := func() (e error) {
@@ -177,6 +230,10 @@ func handleClient(client net.Conn) {
 	}
 }
 
+// func handleCustomProtocol() {
+
+// }
+
 func handleHttpRequest(cw *ConnResponseWriter, req *http.Request, ps *types.ProxyServer) (e error) {
 	if req.URL != nil && req.URL.Scheme == "" {
 		req.URL.Scheme = "https"
@@ -188,7 +245,7 @@ func handleHttpRequest(cw *ConnResponseWriter, req *http.Request, ps *types.Prox
 
 	if ps != nil {
 		userAgent := conf.Args.Network.DefaultUserAgent
-		if uaVal, e := ua.GetUserAgent(ps.UrlString()); e != nil {
+		if uaVal, e := ua.GetUserAgent(ps.UrlString()); e != nil && uaVal == "" {
 			log.Warnf("failed to get random user-agent: %+v\nfallback to default User-Agent: %s", e, userAgent)
 		} else {
 			userAgent = uaVal
@@ -256,8 +313,29 @@ func handleHttpRequest(cw *ConnResponseWriter, req *http.Request, ps *types.Prox
 	return nil
 }
 
-func intercept(req *http.Request, client net.Conn) (newReq *http.Request, newConn *tls.Conn, e error) {
+func intercept(cw *ConnResponseWriter, req *http.Request, client net.Conn) (newReq *http.Request, newConn *tls.Conn, e error) {
 	hostName := req.URL.Hostname()
+	newReq = req
+	//TODO: handle authentication tokens
+	// authHeader := req.Header.Get("Authorization")
+	// if authHeader == "" {
+	// 	authHeader = req.Header.Get("Proxy-Authorization")
+	// }
+	// var authResponse *http.Response
+	// var authBody []byte
+	// if authHeader != "" {
+	// 	if authResponse, e = handleHttpAuthentication(cw, req, client); e != nil {
+	// 		return
+	// 	}
+	// 	// defer authResponse.Body.Close()
+
+	// 	// authBody, e = io.ReadAll(authResponse.Body)
+	// 	// if e != nil {
+	// 	// 	e = errors.Wrap(e, "Error reading authentication response body")
+	// 	// 	log.Warn(e)
+	// 	// 	return
+	// 	// }
+	// }
 
 	var certificate tls.Certificate
 	var found bool
@@ -265,6 +343,7 @@ func intercept(req *http.Request, client net.Conn) (newReq *http.Request, newCon
 		if certificate, e = cert.LoadOrGenerate(hostName); e != nil {
 			return
 		}
+		//FIXME: fatal error: concurrent map writes
 		certStore[hostName] = certificate
 	}
 
@@ -281,34 +360,23 @@ func intercept(req *http.Request, client net.Conn) (newReq *http.Request, newCon
 
 	// Hijack the connection and try to perform a TLS handshake.
 	newConn = tls.Server(client, tlsConfig)
+	// swap the connection with intercepted connection
+	cw.conn = newConn
+
+	// if authResponse != nil {
+	// 	for key, values := range authResponse.Header {
+	// 		for _, value := range values {
+	// 			cw.Header().Add(key, value)
+	// 		}
+	// 	}
+	// 	cw.WriteHeader(authResponse.StatusCode)
+	// 	cw.Write(authBody)
+	// }
+
 	if e = newConn.Handshake(); e != nil {
 		defer newConn.Close()
 		log.Warnf("TLS handshake error: %v\n", e)
 		return
-		// handleTlsHandshakeError(newConn)
-		// if the handshake fails, the client-server could be using custom protocols based off TLS.
-		// try to parse the request as raw data (bytes or strings), with timeout constraint because
-		// the client could be onholding and not sending any data, waiting for server to send message first.
-		// ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		// defer cancel()
-
-		// select {
-		// case <-ctx.Done():
-		// 	log.Warn("Client did not send data within the timeout period.")
-		// 	e = ctx.Err()
-		// 	return
-		// default:
-		// 	// Proceed with reading the data as raw if there's any
-		// 	r := bufio.NewReader(newConn)
-		// 	for {
-		// 		msg, err := r.ReadString('\n')
-		// 		if err != nil {
-		// 			log.Errorf("failed to read custom string: %s", err)
-		// 			return
-		// 		}
-		// 		log.Infof("Received: %s", msg)
-		// 	}
-		// }
 	}
 
 	// read request from tlsConn
@@ -317,6 +385,99 @@ func intercept(req *http.Request, client net.Conn) (newReq *http.Request, newCon
 	}
 
 	return
+}
+
+func handleHttpAuthentication(cw *ConnResponseWriter, r *http.Request, client net.Conn) (response *http.Response, e error) {
+	// Log the request details
+	logRequestDetails(r)
+	// Step 1: Establish a TCP connection to the target server
+	var destConn net.Conn
+	log.Warnf("client trying to connect host: %s", r.Host)
+	destConn, e = net.DialTimeout("tcp", r.Host, 5*time.Second)
+	if e != nil {
+		log.Error(e.Error(), http.StatusServiceUnavailable)
+		return
+	}
+	defer destConn.Close()
+
+	cw.WriteHeader(http.StatusOK)
+
+	// // Step 2: Forward the request to the destination server
+	// if err := r.Write(destConn); err != nil {
+	// 	log.Errorf("Failed to forward request to destination: %v", err)
+	// 	e = err
+	// 	return
+	// }
+
+	// // Read the response from the destination server
+	// destConn.SetReadDeadline(time.Now().Add(10 * time.Second))
+	// response, e = http.ReadResponse(bufio.NewReader(destConn), r)
+	// if e != nil {
+	// 	log.Error(e.Error(), http.StatusServiceUnavailable)
+	// 	return
+	// }
+
+	// // If the destination server responds with a non-200 status, relay that to the client
+	// if response.StatusCode != http.StatusOK {
+	// 	// Relay the non-200 status to the client, with response.Body
+	// 	fmt.Fprintf(client,
+	// 		"HTTP/1.1 %d %s\r\n\r\n",
+	// 		response.StatusCode,
+	// 		http.StatusText(response.StatusCode))
+	// 	return
+	// }
+	return
+}
+
+func logRequestDetails(r *http.Request) {
+	// Save a copy of the request for logging
+	var requestBodyBytes []byte
+	if r.Body != nil {
+		requestBodyBytes, _ = io.ReadAll(r.Body)
+	}
+	r.Body = io.NopCloser(bytes.NewBuffer(requestBodyBytes)) // Reset r.Body to its original state
+
+	// Log the request body
+	log.Infof("Request Body: %s\n", string(requestBodyBytes))
+}
+
+// func sniffDest(req *http.Request) {
+// 	// Extract the target host and port from the request URL
+// 	targetHost := req.URL.Host
+// 	if targetHost == "" {
+// 		targetHost = req.Host
+// 	}
+// 	if _, _, err := net.SplitHostPort(targetHost); err != nil {
+// 		if strings.Contains(err.Error(), "missing port in address") {
+// 			// Default to port 80 if not specified
+// 			targetHost = net.JoinHostPort(targetHost, "80")
+// 		} else {
+// 			log.Errorf("Failed to parse host: %v", err)
+// 			return
+// 		}
+// 	}
+// 	targetConn, err := net.Dial("tcp", targetHost)
+// }
+
+func readFromConnection(conn net.Conn, timeout int) (data []byte, e error) {
+	// read all bytes raw data from conn with timeout. Don't assume it's TLS connection.
+	conn.SetReadDeadline(time.Now().Add(time.Duration(timeout) * time.Second))
+	buffer := make([]byte, 4096) // Adjust buffer size as needed
+	var totalData []byte
+	for {
+		readBytes, err := conn.Read(buffer)
+		if err != nil {
+			if err == io.EOF {
+				break // End of data
+			} else if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
+				break // Timeout reached
+			} else {
+				return nil, err // Other error occurred
+			}
+		}
+		totalData = append(totalData, buffer[:readBytes]...)
+	}
+	return totalData, nil
 }
 
 // randomly select a proxy from the cache

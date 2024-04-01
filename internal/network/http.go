@@ -149,10 +149,13 @@ func HTTPGetResponse(link string, headers map[string]string, useMasterProxy, rot
 		client = &http.Client{Timeout: timeout}
 	}
 
-	for i := 0; true; i++ {
+	for i := 0; i < 3; i++ {
 		req, err := http.NewRequest(http.MethodGet, link, nil)
 		if err != nil {
-			log.Panic(err)
+			log.Errorln("failed to call http.NewRequest()", e)
+			time.Sleep(time.Millisecond * time.Duration(1000+rand.Intn(4000)))
+			e = err
+			continue
 		}
 
 		req.Header.Set("Accept", "text/html,application/xhtml+xml,"+
@@ -166,10 +169,10 @@ func HTTPGetResponse(link string, headers map[string]string, useMasterProxy, rot
 		req.Header.Set("Upgrade-Insecure-Requests", "1")
 		uagent := ""
 		if rotateAgent {
-			uagent, e = ua.PickUserAgent()
+			uagent, e = ua.PickUserAgent(i > 1)
 			if e != nil {
 				log.Errorln("failed to acquire rotate user agent", e)
-				time.Sleep(time.Millisecond * time.Duration(300+rand.Intn(300)))
+				time.Sleep(time.Millisecond * time.Duration(1000+rand.Intn(4000)))
 				continue
 			}
 		} else {

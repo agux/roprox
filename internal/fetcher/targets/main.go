@@ -118,7 +118,12 @@ func fetchStaticHTML(urlIdx int, url string, chpx chan<- *t.ProxyServer, fspec t
 		log.Errorf("failed to get free proxy list from %s, giving up %+v", url, e)
 		return
 	}
-	defer res.Body.Close()
+	if res != nil {
+		defer res.Body.Close()
+	} else {
+		return
+	}
+
 	var body io.Reader
 	body = res.Body
 	// parse body using goquery
@@ -234,7 +239,7 @@ func allocatorOptions(fspec types.FetcherSpec) (o []chromedp.ExecAllocatorOption
 		o = append(o, chromedp.ProxyServer(p))
 	}
 	if types.Direct != proxyMode {
-		if ua, e := ua.PickUserAgent(); e != nil {
+		if ua, e := ua.PickUserAgent(false); e != nil {
 			log.Fatalf("failed to pick user agents from the pool: %+v", e)
 		} else {
 			o = append(o, chromedp.UserAgent(ua))

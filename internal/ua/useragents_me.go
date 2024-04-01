@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/PuerkitoBio/goquery"
 	"github.com/agux/roprox/internal/conf"
 	"github.com/agux/roprox/internal/data"
 	"github.com/agux/roprox/internal/types"
@@ -44,21 +45,66 @@ func (uam userAgentsMe) outdated(agents []*types.UserAgent) (outdated bool, e er
 	return
 }
 
+func (uam userAgentsMe) getViaHTML() (uamJson userAgentsMeJson, e error) {
+	// The URL of the page to scrape
+	url := "https://www.useragents.me/"
+
+	// Fetch the URL
+	res, err := http.Get(url)
+	if err != nil {
+		e = err
+		return
+	}
+	defer res.Body.Close()
+
+	// Check for HTTP error
+	if res.StatusCode != 200 {
+		e = errors.Errorf("status code error: %d %s", res.StatusCode, res.Status)
+		return
+	}
+
+	// Parse the page with goquery
+	doc, err := goquery.NewDocumentFromReader(res.Body)
+	if err != nil {
+		e = err
+		return
+	}
+
+	// Use the CSS selector to find the textarea element and extract its value
+	selector := "#most-common-desktop-useragents-json-csv > div:nth-child(1) > textarea"
+	jsonValue := doc.Find(selector).Text()
+
+	// Unmarshal the JSON into the struct
+	err = json.Unmarshal([]byte(jsonValue), &uamJson.Data)
+	if err != nil {
+		e = err
+		return
+	}
+
+	return
+
+}
+
 func (uam userAgentsMe) get() (agents []*types.UserAgent, e error) {
 	url := conf.Args.DataSource.UserAgents
 
+	var uamJson userAgentsMeJson
 	jsonStr, e := uam.getJSON(url)
 	if e != nil {
-		log.Errorf("failed to get agent list from %s, giving up %+v", url, e)
-		return
+		log.Errorf("failed to get agent list from %s using JSON API. Resort to HTML collector: %+v", url, e)
+		// try alternative to get using HTML
+		if uamJson, e = uam.getViaHTML(); e != nil {
+			log.Errorf("failed to get agent list from %s using HTML. Giving up: %+v", url, e)
+			return
+		}
+	} else {
+		//parse user agents
+		if e = json.Unmarshal([]byte(jsonStr), &uamJson); e != nil {
+			e = errors.Wrapf(e, "unable to unmarshal json from text: %s", jsonStr)
+			return
+		}
 	}
 
-	//parse user agents
-	var uamJson userAgentsMeJson
-	if e = json.Unmarshal([]byte(jsonStr), &uamJson); e != nil {
-		e = errors.Wrapf(e, "unable to unmarshal json from text: %s", jsonStr)
-		return
-	}
 	for _, u := range uamJson.Data {
 		ua := &types.UserAgent{
 			ID:        -1,
@@ -140,7 +186,6 @@ func (uam userAgentsMe) assignID(agents []*types.UserAgent) (maxID int64, e erro
 }
 
 func (uam userAgentsMe) mergeAgents(agents []*types.UserAgent) (e error) {
-	//FIXME: record not updated
 	if _, e = uam.assignID(agents); e != nil {
 		return
 	}

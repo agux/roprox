@@ -15,10 +15,12 @@ var (
 	uaLock    = sync.RWMutex{}
 )
 
-// PickUserAgent picks a user agent string from the pool randomly.
-// if the pool is not populated, it will trigger the initialization process
-// to fetch user agent lists from remote server.
-func PickUserAgent() (ua string, e error) {
+// PickUserAgent selects a random user agent string from the pool.
+// If the pool is empty or the user agent strings are outdated, it attempts to refresh them from remote service.
+// The noRefresh parameter can be set to true to avoid refreshing the pool even if it's outdated.
+//
+// Returns a user agent string or an error if the operation fails.
+func PickUserAgent(noRefresh bool) (ua string, e error) {
 	uaLock.Lock()
 	defer uaLock.Unlock()
 
@@ -44,28 +46,34 @@ func PickUserAgent() (ua string, e error) {
 	if agents, e = uaFetcher.load(); e != nil {
 		return
 	}
-	outdated := false
-	if len(agents) != 0 {
-		if outdated, e = uaFetcher.outdated(agents); e != nil {
-			return
+	if len(agents) > 0 {
+		ua = agents[rand.Intn(len(agents))].UserAgent.String
+	}
+	if !noRefresh {
+		outdated := false
+		if len(agents) != 0 {
+			if outdated, e = uaFetcher.outdated(agents); e != nil {
+				return
+			}
+		}
+		//if none, or outdated, refresh table from remote server
+		if outdated || len(agents) == 0 {
+			//download sample file and load into database server
+			log.Info("fetching user agent list from remote server...")
+			if agents, e = uaFetcher.get(); e != nil {
+				return
+			}
+			log.Infof("successfully fetched %d user agents from remote server.", len(agents))
+			//reload agents from database
+			if agents, e = uaFetcher.load(); e != nil {
+				return
+			}
+		}
+		for _, a := range agents {
+			agentPool = append(agentPool, a.UserAgent.String)
 		}
 	}
-	//if none, or outdated, refresh table from remote server
-	if outdated || len(agents) == 0 {
-		//download sample file and load into database server
-		log.Info("fetching user agent list from remote server...")
-		if agents, e = uaFetcher.get(); e != nil {
-			return
-		}
-		log.Infof("successfully fetched %d user agents from remote server.", len(agents))
-		//reload agents from database
-		if agents, e = uaFetcher.load(); e != nil {
-			return
-		}
-	}
-	for _, a := range agents {
-		agentPool = append(agentPool, a.UserAgent.String)
-	}
+
 	if len(agentPool) == 0 {
 		e = errors.New("user agent strings are not available at this moment")
 		log.Warn(e)
@@ -105,22 +113,18 @@ func (cache *userAgentCache) downgradeAndUnlock() {
 }
 
 func (cache *userAgentCache) GetUserAgent(proxyURL string) (string, error) {
-	cache.r_lock()
-	if cache.userAgentBinding == nil {
-		cache.userAgentBinding = make(map[string]string)
-	}
+	cache.r_lock() // FIXME  easily get dead lock at this point
 	if value, ok := cache.userAgentBinding[proxyURL]; ok {
 		cache.r_unlock()
 		return value, nil
 	} else {
 		cache.upgradeToWriteLock()
 		defer cache.downgradeAndUnlock()
-		currentTime := time.Now().Unix()
-		if ua, e := PickUserAgent(); e != nil {
-			return "", e
+		if ua, e := PickUserAgent(false); e != nil {
+			return ua, e
 		} else {
 			cache.userAgentBinding[proxyURL] = ua
-			cache.cacheLastUpdated = currentTime
+			cache.cacheLastUpdated = time.Now().Unix()
 			return ua, nil
 		}
 	}

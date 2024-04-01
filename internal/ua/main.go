@@ -44,5 +44,7 @@ func try(op func(int) error, maxRetry int, maxDelay time.Duration) error {
 }
 
 func init() {
-	uaCache = &userAgentCache{}
+	uaCache = &userAgentCache{
+		userAgentBinding: make(map[string]string),
+	}
 }
